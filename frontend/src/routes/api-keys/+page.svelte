@@ -4,6 +4,7 @@
   import { toasts } from '$lib/stores/toast';
   import type { Project, APIKey, CreateAPIKeyResponse } from '$lib/types';
   import SearchableSelect from '$lib/components/SearchableSelect.svelte';
+  import { Key } from 'lucide-svelte';
 
   let projects = $state<Project[]>([]);
   let selectedProjectId = $state('');
@@ -107,8 +108,8 @@
   {#if newRawKey}
     <div class="bg-white dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 rounded-2xl p-6 shadow-sm">
       <div class="flex items-start gap-4">
-        <div class="p-2 bg-emerald-100 dark:bg-emerald-900/50 rounded-lg text-2xl hidden sm:block">
-           🔑
+        <div class="p-2 bg-emerald-100 dark:bg-emerald-900/50 rounded-lg hidden sm:flex items-center justify-center text-emerald-700 dark:text-emerald-500">
+           <Key size={24} />
         </div>
         <div class="flex-1 min-w-0">
            <p class="text-base text-heading dark:text-emerald-400 font-semibold mb-1">API Key Generated</p>
@@ -149,8 +150,8 @@
     <div class="grid gap-3">
       {#each apiKeys as key}
         <div class="themed-card backdrop-blur-xl rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center gap-4">
-          <div class="w-10 h-10 rounded-xl bg-primary-600/20 flex items-center justify-center text-lg shrink-0 hidden sm:flex">
-            🔑
+          <div class="w-10 h-10 rounded-xl bg-primary-600/20 flex items-center justify-center text-primary-600 shrink-0 hidden sm:flex">
+            <Key size={20} />
           </div>
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2 mb-1">

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { ChevronDown } from 'lucide-svelte';
   
   interface Item {
     [key: string]: any;
@@ -69,7 +70,9 @@
     <span class={!selectedItem ? "text-muted" : "text-heading"}>
       {selectedItem ? selectedItem[labelKey] : placeholder}
     </span>
-    <span class="text-subtle text-xs transition-transform {isOpen ? 'rotate-180' : ''}">▼</span>
+    <span class="text-subtle text-xs transition-transform flex items-center {isOpen ? 'rotate-180' : ''}">
+      <ChevronDown size={14} />
+    </span>
   </button>
 
   {#if isOpen}

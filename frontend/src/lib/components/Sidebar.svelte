@@ -2,11 +2,12 @@
   import { page } from '$app/state';
   import { auth } from '$lib/stores/auth';
   import ThemeToggle from '$lib/components/ThemeToggle.svelte';
+  import { LayoutDashboard, Folder, Key, LogOut, ChevronLeft, ChevronRight } from 'lucide-svelte';
 
   const navItems = [
-    { href: '/', label: 'Dashboard', icon: '📊' },
-    { href: '/projects', label: 'Projects', icon: '📁' },
-    { href: '/api-keys', label: 'API Keys', icon: '🔑' },
+    { href: '/', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/projects', label: 'Projects', icon: Folder },
+    { href: '/api-keys', label: 'API Keys', icon: Key },
   ];
 
   let collapsed = $state(false);
@@ -39,7 +40,9 @@
         onmouseenter={(e) => { if (!isActive) e.currentTarget.style.background = 'var(--bg-card-hover)'; }}
         onmouseleave={(e) => { if (!isActive) e.currentTarget.style.background = ''; }}
       >
-        <span class="text-base shrink-0">{item.icon}</span>
+        <span class="text-base shrink-0">
+          <item.icon size={20} />
+        </span>
         {#if !collapsed}
           <span class="whitespace-nowrap">{item.label}</span>
         {/if}
@@ -76,7 +79,9 @@
       onmouseenter={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
       onmouseleave={(e) => e.currentTarget.style.background = ''}
     >
-      <span class="shrink-0">🚪</span>
+      <span class="shrink-0">
+        <LogOut size={20} />
+      </span>
       {#if !collapsed}
         <span>Logout</span>
       {/if}
@@ -89,6 +94,10 @@
     class="absolute -right-3 top-20 w-6 h-6 rounded-full flex items-center justify-center text-subtle hover:text-heading transition-colors text-xs"
     style="background: var(--bg-elevated); border: 1px solid var(--border-default);"
   >
-    {collapsed ? '→' : '←'}
+    {#if collapsed}
+      <ChevronRight size={14} />
+    {:else}
+      <ChevronLeft size={14} />
+    {/if}
   </button>
 </aside>
