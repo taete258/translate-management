@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"log"
 	"regexp"
 	"strings"
 
@@ -25,21 +26,26 @@ func (h *ProjectHandler) List(c *fiber.Ctx) error {
 	search := c.Query("search", "")
 
 	var rows interface{ Close() }
-	query := `SELECT id, name, slug, description, created_by, created_at, updated_at FROM projects WHERE created_by = $1`
+	query := `
+		SELECT DISTINCT p.id, p.name, p.slug, p.description, p.created_by, p.created_at, p.updated_at 
+		FROM projects p
+		LEFT JOIN project_members pm ON p.id = pm.project_id
+		WHERE p.created_by = $1 OR pm.user_id = $1`
 	args := []interface{}{userID}
 
 	if search != "" {
-		query += ` AND (name ILIKE $2 OR slug ILIKE $2)`
+		query += ` AND (p.name ILIKE $2 OR p.slug ILIKE $2)`
 		args = append(args, "%"+search+"%")
 	}
-	query += ` ORDER BY created_at DESC`
+	query += ` ORDER BY p.created_at DESC`
 
 	r, err := h.DB.Query(context.Background(), query, args...)
 	if err != nil {
+		log.Printf("Error fetching projects: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch projects"})
 	}
 	rows = r
-	defer rows.(interface{ Close() }).Close()
+	defer rows.Close()
 
 	projects := []models.Project{}
 	for r.Next() {
@@ -58,11 +64,15 @@ func (h *ProjectHandler) Get(c *fiber.Ctx) error {
 	id := c.Params("id")
 	userID := c.Locals("user_id").(string)
 
-	var p models.Project
+	var p models.ProjectWithRole
 	err := h.DB.QueryRow(context.Background(),
-		`SELECT id, name, slug, description, created_by, created_at, updated_at FROM projects WHERE id = $1 AND created_by = $2`,
+		`SELECT p.id, p.name, p.slug, p.description, p.created_by, p.created_at, p.updated_at,
+		 CASE WHEN p.created_by = $2 THEN 'owner' ELSE COALESCE(pm.role, 'viewer') END as role
+		 FROM projects p
+		 LEFT JOIN project_members pm ON p.id = pm.project_id AND pm.user_id = $2
+		 WHERE p.id = $1 AND (p.created_by = $2 OR pm.user_id = $2)`,
 		id, userID,
-	).Scan(&p.ID, &p.Name, &p.Slug, &p.Description, &p.CreatedBy, &p.CreatedAt, &p.UpdatedAt)
+	).Scan(&p.ID, &p.Name, &p.Slug, &p.Description, &p.CreatedBy, &p.CreatedAt, &p.UpdatedAt, &p.Role)
 
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Project not found"})
@@ -152,11 +162,17 @@ func (h *ProjectHandler) Stats(c *fiber.Ctx) error {
 	id := c.Params("id")
 	userID := c.Locals("user_id").(string)
 
-	// Validate ownership
+	// Validate ownership or membership
 	var exists bool
-	err := h.DB.QueryRow(context.Background(), "SELECT EXISTS(SELECT 1 FROM projects WHERE id = $1 AND created_by = $2)", id, userID).Scan(&exists)
+	err := h.DB.QueryRow(context.Background(), 
+		`SELECT EXISTS(
+			SELECT 1 FROM projects p 
+			LEFT JOIN project_members pm ON p.id = pm.project_id 
+			WHERE p.id = $1 AND (p.created_by = $2 OR pm.user_id = $2)
+		)`, id, userID).Scan(&exists)
+	
 	if err != nil || !exists {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Project not found"})
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Project not found or access denied"})
 	}
 
 	var totalKeys, totalLangs int

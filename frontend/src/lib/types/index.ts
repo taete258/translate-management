@@ -21,6 +21,7 @@ export interface Project {
   created_by?: string;
   created_at: string;
   updated_at: string;
+  role?: string;
 }
 
 export interface Language {
@@ -80,4 +81,17 @@ export interface CacheStatus {
   project: string;
   cached: boolean;
   cached_keys: number;
+}
+
+export interface ProjectInvitation {
+  id: string;
+  project_id: string;
+  email: string;
+  role: string;
+  invited_by: string;
+  status: "pending" | "accepted" | "rejected";
+  created_at: string;
+  expires_at: string;
+  project_name?: string;
+  inviter_name?: string;
 }

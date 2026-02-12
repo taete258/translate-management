@@ -22,10 +22,17 @@ func (h *TranslationHandler) Get(c *fiber.Ctx) error {
 	projectID := c.Params("id")
 	userID := c.Locals("user_id").(string)
 
-	// Verify project ownership
+	// Verify project membership
 	var exists bool
-	if err := h.DB.QueryRow(context.Background(), "SELECT EXISTS(SELECT 1 FROM projects WHERE id = $1 AND created_by = $2)", projectID, userID).Scan(&exists); err != nil || !exists {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Project not found"})
+	err := h.DB.QueryRow(context.Background(), 
+		`SELECT EXISTS(
+			SELECT 1 FROM projects p 
+			LEFT JOIN project_members pm ON p.id = pm.project_id 
+			WHERE p.id = $1 AND (p.created_by = $2 OR pm.user_id = $2)
+		)`, projectID, userID).Scan(&exists)
+	
+	if err != nil || !exists {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Project not found or access denied"})
 	}
 	search := c.Query("search", "")
 
@@ -106,10 +113,25 @@ func (h *TranslationHandler) BatchUpdate(c *fiber.Ctx) error {
 	projectID := c.Params("id")
 	userID := c.Locals("user_id").(string)
 
-	// Verify project ownership
-	var exists bool
-	if err := h.DB.QueryRow(context.Background(), "SELECT EXISTS(SELECT 1 FROM projects WHERE id = $1 AND created_by = $2)", projectID, userID).Scan(&exists); err != nil || !exists {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Project not found"})
+	// Verify project membership and role
+	var role string
+	err := h.DB.QueryRow(context.Background(), 
+		`SELECT 
+			CASE 
+				WHEN p.created_by = $2 THEN 'owner'
+				ELSE pm.role
+			END as role
+		FROM projects p 
+		LEFT JOIN project_members pm ON p.id = pm.project_id AND pm.user_id = $2
+		WHERE p.id = $1`, 
+		projectID, userID).Scan(&role)
+	
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Project not found or access denied"})
+	}
+
+	if role != "owner" && role != "editor" {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Insufficient permissions"})
 	}
 
 	var req models.BatchTranslationUpdate

@@ -4,7 +4,7 @@
   import { api } from '$lib/api/client';
   import { toasts } from '$lib/stores/toast';
   import type { Project, Language, TranslationEntry, ProjectStats, CacheStatus } from '$lib/types';
-  import { ChevronDown, ArrowLeft, RefreshCcw, Plus, Star, X, Globe, Trash2, Download } from 'lucide-svelte';
+  import { ChevronDown, ArrowLeft, RefreshCcw, Plus, Star, X, Globe, Trash2, Download, Users } from 'lucide-svelte';
 
   const projectId = $derived(page.params.id);
 
@@ -33,11 +33,20 @@
   let newKey = $state('');
   let newKeyDesc = $state('');
 
+  // Sharing
+  let showShare = $state(false);
+  let inviteEmail = $state('');
+  let inviteRole = $state('viewer');
+
   const filteredEntries = $derived(
     entries.filter((e) =>
       e.key.toLowerCase().includes(search.toLowerCase())
     )
   );
+
+  const userRole = $derived(project?.role || 'viewer');
+  const canEdit = $derived(userRole === 'owner' || userRole === 'editor');
+  const isOwner = $derived(userRole === 'owner');
 
   onMount(() => loadAll(true));
 
@@ -65,10 +74,36 @@
   }
 
   function handleCellChange(keyId: string, langId: string, value: string) {
+    if (!canEdit) return;
     const changeKey = `${keyId}:${langId}`;
     pendingChanges.set(changeKey, value);
     pendingChanges = new Map(pendingChanges);
   }
+
+  // ... (keep existing functions)
+
+  // ... in template
+  
+  // Header with role badge
+  // <h1 class="text-3xl font-bold text-heading flex items-center gap-3">
+  //   {project.name}
+  //   <span class="text-xs px-2 py-1 rounded-full border font-normal
+  //     {isOwner ? 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20' : 
+  //      canEdit ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' : 
+  //      'bg-slate-500/10 text-slate-500 border-slate-500/20'}">
+  //     {userRole}
+  //   </span>
+  // </h1>
+
+  // ...
+
+  // Buttons visibility
+  // {#if languages.length > 0 && canEdit}
+  //   <button onclick={() => showAddKey = true} ... >
+  
+  // Translation Input
+  // <input disabled={!canEdit} ... />
+
 
   async function saveChanges() {
     if (pendingChanges.size === 0) return;
@@ -146,6 +181,21 @@
     }
   }
 
+  async function inviteUser() {
+    try {
+      await api.post(`/api/projects/${projectId}/invitations`, {
+        email: inviteEmail,
+        role: inviteRole,
+      });
+      toasts.success(`Invitation sent to ${inviteEmail}`);
+      showShare = false;
+      inviteEmail = '';
+      inviteRole = 'viewer';
+    } catch (err: any) {
+      toasts.error(err.message || 'Failed to send invitation');
+    }
+  }
+
   async function invalidateCache() {
     if (!confirm('Force invalidate all cached translations for this project?')) return;
     try {
@@ -207,7 +257,15 @@
             <ArrowLeft size={16} /> Projects
           </a>
         </div>
-        <h1 class="text-3xl font-bold text-heading">{project.name}</h1>
+        <h1 class="text-3xl font-bold text-heading flex items-center gap-3">
+          {project.name}
+          <span class="text-xs px-2 py-1 rounded-full border font-normal capitalize
+            {project.role === 'owner' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' : 
+             project.role === 'editor' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 
+             'bg-slate-500/10 text-slate-400 border-slate-500/20'}">
+            {project.role || 'viewer'}
+          </span>
+        </h1>
         <p class="text-subtle mt-1">{project.description || project.slug}</p>
       </div>
       <div class="flex gap-2">
@@ -284,6 +342,16 @@
             </div>
           {/if}
 
+          {#if isOwner}
+            <button
+              onclick={() => showShare = true}
+              class="px-3 py-2 bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 border border-blue-500/30 rounded-xl text-sm transition-all flex items-center gap-1.5"
+              title="Share Project"
+            >
+              <Users size={14} /> Share
+            </button>
+          {/if}
+
           <button
             onclick={invalidateCache}
             class="px-3 py-2 bg-amber-600/20 text-amber-500 hover:bg-amber-600/30 border border-amber-500/30 rounded-xl text-sm transition-all"
@@ -327,7 +395,7 @@
         placeholder="Search keys..."
         class="themed-input px-4 py-2 rounded-xl text-sm w-64"
       />
-      {#if languages.length > 0}
+      {#if languages.length > 0 && canEdit}
         <button
           onclick={() => showAddKey = true}
           class="px-3 py-2 bg-primary-600/20 text-primary-500 hover:bg-primary-600/30 border border-primary-500/30 rounded-xl text-sm transition-all flex items-center gap-1.5"
@@ -335,12 +403,14 @@
           <Plus size={14} /> Add Key
         </button>
       {/if}
-      <button
-        onclick={() => showAddLang = true}
-        class="px-3 py-2 bg-emerald-600/20 text-emerald-500 hover:bg-emerald-600/30 border border-emerald-500/30 rounded-xl text-sm transition-all flex items-center gap-1.5"
-      >
-        <Plus size={14} /> Add Language
-      </button>
+      {#if canEdit}
+        <button
+          onclick={() => showAddLang = true}
+          class="px-3 py-2 bg-emerald-600/20 text-emerald-500 hover:bg-emerald-600/30 border border-emerald-500/30 rounded-xl text-sm transition-all flex items-center gap-1.5"
+        >
+          <Plus size={14} /> Add Language
+        </button>
+      {/if}
 
       {#if pendingChanges.size > 0}
         <button
@@ -364,13 +434,15 @@
             {#if lang.is_default}
               <Star size={12} class="text-primary-500 fill-current" />
             {/if}
-            <button
-              onclick={() => deleteLanguage(lang)}
-              class="text-faint hover:text-red-500 transition-colors ml-1"
-              title="Remove"
-            >
-              <X size={14} />
-            </button>
+            {#if canEdit}
+              <button
+                onclick={() => deleteLanguage(lang)}
+                class="text-faint hover:text-red-500 transition-colors ml-1"
+                title="Remove"
+              >
+                <X size={14} />
+              </button>
+            {/if}
           </span>
         {/each}
       </div>
@@ -426,22 +498,25 @@
                   <td class="px-4 py-2">
                     <input
                       type="text"
+                      disabled={!canEdit}
                       value={pendingChanges.get(`${entry.key_id}:${lang.id}`) ?? entry.values[lang.id] ?? ''}
                       oninput={(e) => handleCellChange(entry.key_id, lang.id, (e.target as HTMLInputElement).value)}
-                      class="w-full px-2.5 py-1.5 bg-transparent border border-transparent rounded-lg text-sm focus:outline-none transition-all {pendingChanges.has(`${entry.key_id}:${lang.id}`) ? 'border-amber-500/40 bg-amber-500/5' : ''}"
+                      class="w-full px-2.5 py-1.5 bg-transparent border border-transparent rounded-lg text-sm focus:outline-none transition-all {pendingChanges.has(`${entry.key_id}:${lang.id}`) ? 'border-amber-500/40 bg-amber-500/5' : ''} disabled:opacity-50 disabled:cursor-not-allowed"
                       style="color: var(--text-primary);"
-                      placeholder="—"
+                      placeholder={canEdit ? "—" : ""}
                     />
                   </td>
                 {/each}
                 <td class="px-2 py-2">
-                  <button
-                    onclick={() => deleteKey(entry.key_id, entry.key)}
-                    class="p-1 text-faint hover:text-red-500 rounded transition-all"
-                    title="Delete key"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  {#if canEdit}
+                    <button
+                      onclick={() => deleteKey(entry.key_id, entry.key)}
+                      class="p-1 text-faint hover:text-red-500 rounded transition-all"
+                      title="Delete key"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  {/if}
                 </td>
               </tr>
             {/each}
@@ -500,6 +575,36 @@
             <div class="flex gap-3 justify-end">
               <button type="button" onclick={() => showAddKey = false} class="px-4 py-2 text-subtle hover:text-heading text-sm">Cancel</button>
               <button type="submit" class="px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-xl text-sm">Add</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  {/if}
+
+  <!-- Share Modal -->
+  {#if showShare}
+    <div class="fixed inset-0 z-50 flex items-center justify-center">
+      <button class="themed-modal-overlay absolute inset-0 backdrop-blur-sm" aria-label="Close" onclick={() => showShare = false}></button>
+      <div class="themed-modal relative rounded-2xl p-6 w-full max-w-sm">
+        <h2 class="text-xl font-bold text-heading mb-4">Share Project</h2>
+        <form onsubmit={(e) => { e.preventDefault(); inviteUser(); }}>
+          <div class="space-y-4">
+            <div>
+              <label for="iEmail" class="block text-sm font-medium text-body mb-1.5">Email Address</label>
+              <input id="iEmail" type="email" bind:value={inviteEmail} placeholder="colleague@example.com" required class="themed-input w-full px-4 py-2.5 rounded-xl transition-all" />
+            </div>
+            <div>
+              <label for="iRole" class="block text-sm font-medium text-body mb-1.5">Role</label>
+              <select id="iRole" bind:value={inviteRole} class="themed-input w-full px-4 py-2.5 rounded-xl transition-all appearance-none bg-transparent">
+                <option value="viewer">Viewer (Read-only)</option>
+                <option value="editor">Editor (Can edit translations)</option>
+                <option value="owner">Owner (Full access)</option>
+              </select>
+            </div>
+            <div class="flex gap-3 justify-end">
+              <button type="button" onclick={() => showShare = false} class="px-4 py-2 text-subtle hover:text-heading text-sm">Cancel</button>
+              <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm">Send Invite</button>
             </div>
           </div>
         </form>

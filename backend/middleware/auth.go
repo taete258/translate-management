@@ -13,14 +13,16 @@ import (
 type Claims struct {
 	UserID   string `json:"user_id"`
 	Username string `json:"username"`
+	Email    string `json:"email"`
 	jwt.RegisteredClaims
 }
 
 // GenerateToken creates a JWT token for a user
-func GenerateToken(userID, username string, cfg *config.Config) (string, error) {
+func GenerateToken(userID, username, email string, cfg *config.Config) (string, error) {
 	claims := &Claims{
 		UserID:   userID,
 		Username: username,
+		Email:    email,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -61,6 +63,7 @@ func AuthRequired(cfg *config.Config) fiber.Handler {
 
 		c.Locals("user_id", claims.UserID)
 		c.Locals("username", claims.Username)
+		c.Locals("user_email", claims.Email)
 		return c.Next()
 	}
 }
