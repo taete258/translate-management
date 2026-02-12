@@ -76,7 +76,6 @@
       await api.put(`/api/projects/${projectId}/translations`, { translations });
       toasts.success(`Saved ${translations.length} translations`);
       pendingChanges = new Map();
-      // Refresh stats
       stats = await api.get<ProjectStats>(`/api/projects/${projectId}/stats`);
       entries = await api.get<TranslationEntry[]>(`/api/projects/${projectId}/translations`);
     } catch (err: any) {
@@ -164,22 +163,23 @@
     <div class="flex items-start justify-between">
       <div>
         <div class="flex items-center gap-2 mb-1">
-          <a href="/projects" class="text-surface-500 hover:text-surface-300 text-sm transition-colors">← Projects</a>
+          <a href="/projects" class="text-faint hover:text-heading text-sm transition-colors">← Projects</a>
         </div>
-        <h1 class="text-3xl font-bold text-surface-100">{project.name}</h1>
-        <p class="text-surface-400 mt-1">{project.description || project.slug}</p>
+        <h1 class="text-3xl font-bold text-heading">{project.name}</h1>
+        <p class="text-subtle mt-1">{project.description || project.slug}</p>
       </div>
       <div class="flex gap-2">
-        <!-- Cache Status & Invalidate -->
         <div class="flex items-center gap-2">
           {#if cacheStatus}
-            <span class="text-xs px-2 py-1 rounded-lg {cacheStatus.cached ? 'bg-emerald-600/20 text-emerald-400' : 'bg-surface-700/50 text-surface-400'}">
+            <span class="text-xs px-2 py-1 rounded-lg {cacheStatus.cached ? 'bg-emerald-600/20 text-emerald-500' : 'text-faint'}"
+              style={cacheStatus.cached ? '' : 'background: var(--bg-input);'}
+            >
               {cacheStatus.cached ? `Cached (${cacheStatus.cached_keys})` : 'Not cached'}
             </span>
           {/if}
           <button
             onclick={invalidateCache}
-            class="px-3 py-2 bg-amber-600/20 text-amber-400 hover:bg-amber-600/30 border border-amber-500/30 rounded-xl text-sm transition-all"
+            class="px-3 py-2 bg-amber-600/20 text-amber-500 hover:bg-amber-600/30 border border-amber-500/30 rounded-xl text-sm transition-all"
             title="Force invalidate cache"
           >
             🔄 Invalidate Cache
@@ -191,18 +191,18 @@
     <!-- Stats Bar -->
     {#if stats}
       <div class="flex gap-4 flex-wrap">
-        <div class="px-4 py-2 bg-surface-900/60 border border-surface-700/50 rounded-xl">
-          <span class="text-sm text-surface-400">Keys:</span>
-          <span class="text-sm font-medium text-surface-200 ml-1">{stats.total_keys}</span>
+        <div class="themed-card px-4 py-2 rounded-xl">
+          <span class="text-sm text-subtle">Keys:</span>
+          <span class="text-sm font-medium text-heading ml-1">{stats.total_keys}</span>
         </div>
-        <div class="px-4 py-2 bg-surface-900/60 border border-surface-700/50 rounded-xl">
-          <span class="text-sm text-surface-400">Languages:</span>
-          <span class="text-sm font-medium text-surface-200 ml-1">{stats.total_languages}</span>
+        <div class="themed-card px-4 py-2 rounded-xl">
+          <span class="text-sm text-subtle">Languages:</span>
+          <span class="text-sm font-medium text-heading ml-1">{stats.total_languages}</span>
         </div>
         {#each Object.entries(stats.language_progress) as [code, pct]}
-          <div class="px-4 py-2 bg-surface-900/60 border border-surface-700/50 rounded-xl">
-            <span class="text-sm text-surface-400">{code}:</span>
-            <span class="text-sm font-medium {pct === 100 ? 'text-emerald-400' : pct > 50 ? 'text-amber-400' : 'text-red-400'} ml-1">
+          <div class="themed-card px-4 py-2 rounded-xl">
+            <span class="text-sm text-subtle">{code}:</span>
+            <span class="text-sm font-medium {pct === 100 ? 'text-emerald-500' : pct > 50 ? 'text-amber-500' : 'text-red-500'} ml-1">
               {pct.toFixed(0)}%
             </span>
           </div>
@@ -216,17 +216,17 @@
         type="text"
         bind:value={search}
         placeholder="Search keys..."
-        class="px-4 py-2 bg-surface-800/50 border border-surface-700/50 rounded-xl text-surface-100 placeholder-surface-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all text-sm w-64"
+        class="themed-input px-4 py-2 rounded-xl text-sm w-64"
       />
       {#if languages.length > 0}
         <button
           onclick={() => showAddKey = true}
-          class="px-3 py-2 bg-primary-600/20 text-primary-400 hover:bg-primary-600/30 border border-primary-500/30 rounded-xl text-sm transition-all"
+          class="px-3 py-2 bg-primary-600/20 text-primary-500 hover:bg-primary-600/30 border border-primary-500/30 rounded-xl text-sm transition-all"
         >+ Add Key</button>
       {/if}
       <button
         onclick={() => showAddLang = true}
-        class="px-3 py-2 bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 border border-emerald-500/30 rounded-xl text-sm transition-all"
+        class="px-3 py-2 bg-emerald-600/20 text-emerald-500 hover:bg-emerald-600/30 border border-emerald-500/30 rounded-xl text-sm transition-all"
       >+ Add Language</button>
 
       {#if pendingChanges.size > 0}
@@ -244,15 +244,16 @@
     {#if languages.length > 0}
       <div class="flex gap-2 flex-wrap">
         {#each languages as lang}
-          <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-800/50 border border-surface-700/50 rounded-lg text-sm">
-            <span class="text-surface-300">{lang.name}</span>
-            <span class="text-surface-500 font-mono text-xs">({lang.code})</span>
+          <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm"
+            style="background: var(--bg-input); border: 1px solid var(--border-subtle);">
+            <span class="text-body">{lang.name}</span>
+            <span class="text-faint font-mono text-xs">({lang.code})</span>
             {#if lang.is_default}
-              <span class="text-xs text-primary-400">★</span>
+              <span class="text-xs text-primary-500">★</span>
             {/if}
             <button
               onclick={() => deleteLanguage(lang)}
-              class="text-surface-500 hover:text-red-400 transition-colors ml-1"
+              class="text-faint hover:text-red-500 transition-colors ml-1"
               title="Remove"
             >×</button>
           </span>
@@ -262,10 +263,10 @@
 
     <!-- Translation Grid -->
     {#if languages.length === 0}
-      <div class="text-center py-16 bg-surface-900/40 rounded-2xl border border-surface-700/30">
+      <div class="themed-card text-center py-16 rounded-2xl">
         <p class="text-4xl mb-3">🌐</p>
-        <p class="text-surface-400 text-lg mb-2">No languages added yet</p>
-        <p class="text-surface-500 text-sm mb-4">Add at least one language before creating translation keys</p>
+        <p class="text-subtle text-lg mb-2">No languages added yet</p>
+        <p class="text-faint text-sm mb-4">Add at least one language before creating translation keys</p>
         <button
           onclick={() => showAddLang = true}
           class="inline-flex px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors text-sm"
@@ -274,19 +275,20 @@
         </button>
       </div>
     {:else if entries.length === 0}
-      <div class="text-center py-16 bg-surface-900/40 rounded-2xl border border-surface-700/30">
-        <p class="text-surface-400 text-lg mb-2">No translation keys</p>
-        <p class="text-surface-500 text-sm">Add keys to start managing translations</p>
+      <div class="themed-card text-center py-16 rounded-2xl">
+        <p class="text-subtle text-lg mb-2">No translation keys</p>
+        <p class="text-faint text-sm">Add keys to start managing translations</p>
       </div>
     {:else}
-      <div class="overflow-x-auto bg-surface-900/40 rounded-2xl border border-surface-700/30">
+      <div class="themed-card overflow-x-auto rounded-2xl">
         <table class="w-full text-sm">
           <thead>
-            <tr class="border-b border-surface-700/50">
-              <th class="text-left px-4 py-3 text-surface-400 font-medium sticky left-0 bg-surface-900/90 backdrop-blur-sm min-w-[200px]">Key</th>
+            <tr style="border-bottom: 1px solid var(--border-subtle);">
+              <th class="text-left px-4 py-3 text-subtle font-medium sticky left-0 min-w-[200px]"
+                style="background: var(--bg-modal);">Key</th>
               {#each languages as lang}
-                <th class="text-left px-4 py-3 text-surface-400 font-medium min-w-[200px]">
-                  {lang.name} <span class="text-surface-500 font-normal">({lang.code})</span>
+                <th class="text-left px-4 py-3 text-subtle font-medium min-w-[200px]">
+                  {lang.name} <span class="text-faint font-normal">({lang.code})</span>
                 </th>
               {/each}
               <th class="w-10"></th>
@@ -294,11 +296,13 @@
           </thead>
           <tbody>
             {#each filteredEntries as entry}
-              <tr class="border-b border-surface-700/30 hover:bg-surface-800/30 transition-colors">
-                <td class="px-4 py-2 sticky left-0 bg-surface-900/90 backdrop-blur-sm">
-                  <div class="font-mono text-surface-200 text-xs">{entry.key}</div>
+              <tr class="transition-colors" style="border-bottom: 1px solid var(--border-subtle);"
+                onmouseenter={(e) => e.currentTarget.style.background = 'var(--bg-card-hover)'}
+                onmouseleave={(e) => e.currentTarget.style.background = ''}>
+                <td class="px-4 py-2 sticky left-0" style="background: var(--bg-modal);">
+                  <div class="font-mono text-heading text-xs">{entry.key}</div>
                   {#if entry.description}
-                    <div class="text-xs text-surface-500 mt-0.5">{entry.description}</div>
+                    <div class="text-xs text-faint mt-0.5">{entry.description}</div>
                   {/if}
                 </td>
                 {#each languages as lang}
@@ -307,7 +311,8 @@
                       type="text"
                       value={pendingChanges.get(`${entry.key_id}:${lang.id}`) ?? entry.values[lang.id] ?? ''}
                       oninput={(e) => handleCellChange(entry.key_id, lang.id, (e.target as HTMLInputElement).value)}
-                      class="w-full px-2.5 py-1.5 bg-transparent border border-transparent hover:border-surface-600/50 focus:border-primary-500/50 focus:bg-surface-800/50 rounded-lg text-surface-100 text-sm focus:outline-none transition-all {pendingChanges.has(`${entry.key_id}:${lang.id}`) ? 'border-amber-500/40 bg-amber-500/5' : ''}"
+                      class="w-full px-2.5 py-1.5 bg-transparent border border-transparent rounded-lg text-sm focus:outline-none transition-all {pendingChanges.has(`${entry.key_id}:${lang.id}`) ? 'border-amber-500/40 bg-amber-500/5' : ''}"
+                      style="color: var(--text-primary);"
                       placeholder="—"
                     />
                   </td>
@@ -315,7 +320,7 @@
                 <td class="px-2 py-2">
                   <button
                     onclick={() => deleteKey(entry.key_id, entry.key)}
-                    class="p-1 text-surface-500 hover:text-red-400 hover:bg-red-500/10 rounded transition-all"
+                    class="p-1 text-faint hover:text-red-500 rounded transition-all"
                     title="Delete key"
                   >🗑️</button>
                 </td>
@@ -330,25 +335,25 @@
   <!-- Add Language Modal -->
   {#if showAddLang}
     <div class="fixed inset-0 z-50 flex items-center justify-center">
-      <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick={() => showAddLang = false}></div>
-      <div class="relative bg-surface-900 border border-surface-700/50 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
-        <h2 class="text-xl font-bold text-surface-100 mb-4">Add Language</h2>
+      <div class="themed-modal-overlay absolute inset-0 backdrop-blur-sm" onclick={() => showAddLang = false}></div>
+      <div class="themed-modal relative rounded-2xl p-6 w-full max-w-sm">
+        <h2 class="text-xl font-bold text-heading mb-4">Add Language</h2>
         <form onsubmit={(e) => { e.preventDefault(); addLanguage(); }}>
           <div class="space-y-4">
             <div>
-              <label for="lCode" class="block text-sm font-medium text-surface-300 mb-1.5">Code</label>
-              <input id="lCode" type="text" bind:value={langCode} placeholder="en, th, ja..." required class="w-full px-4 py-2.5 bg-surface-800/50 border border-surface-600/50 rounded-xl text-surface-100 focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all" />
+              <label for="lCode" class="block text-sm font-medium text-body mb-1.5">Code</label>
+              <input id="lCode" type="text" bind:value={langCode} placeholder="en, th, ja..." required class="themed-input w-full px-4 py-2.5 rounded-xl transition-all" />
             </div>
             <div>
-              <label for="lName" class="block text-sm font-medium text-surface-300 mb-1.5">Name</label>
-              <input id="lName" type="text" bind:value={langName} placeholder="English" required class="w-full px-4 py-2.5 bg-surface-800/50 border border-surface-600/50 rounded-xl text-surface-100 focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all" />
+              <label for="lName" class="block text-sm font-medium text-body mb-1.5">Name</label>
+              <input id="lName" type="text" bind:value={langName} placeholder="English" required class="themed-input w-full px-4 py-2.5 rounded-xl transition-all" />
             </div>
-            <label class="flex items-center gap-2 text-sm text-surface-300 cursor-pointer">
+            <label class="flex items-center gap-2 text-sm text-body cursor-pointer">
               <input type="checkbox" bind:checked={langDefault} class="accent-primary-500" />
               Set as default language
             </label>
             <div class="flex gap-3 justify-end">
-              <button type="button" onclick={() => showAddLang = false} class="px-4 py-2 text-surface-400 hover:text-surface-200 text-sm">Cancel</button>
+              <button type="button" onclick={() => showAddLang = false} class="px-4 py-2 text-subtle hover:text-heading text-sm">Cancel</button>
               <button type="submit" class="px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-xl text-sm">Add</button>
             </div>
           </div>
@@ -360,21 +365,21 @@
   <!-- Add Key Modal -->
   {#if showAddKey}
     <div class="fixed inset-0 z-50 flex items-center justify-center">
-      <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick={() => showAddKey = false}></div>
-      <div class="relative bg-surface-900 border border-surface-700/50 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
-        <h2 class="text-xl font-bold text-surface-100 mb-4">Add Translation Key</h2>
+      <div class="themed-modal-overlay absolute inset-0 backdrop-blur-sm" onclick={() => showAddKey = false}></div>
+      <div class="themed-modal relative rounded-2xl p-6 w-full max-w-sm">
+        <h2 class="text-xl font-bold text-heading mb-4">Add Translation Key</h2>
         <form onsubmit={(e) => { e.preventDefault(); addKey(); }}>
           <div class="space-y-4">
             <div>
-              <label for="kKey" class="block text-sm font-medium text-surface-300 mb-1.5">Key</label>
-              <input id="kKey" type="text" bind:value={newKey} placeholder="home.hero.title" required class="w-full px-4 py-2.5 bg-surface-800/50 border border-surface-600/50 rounded-xl text-surface-100 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all" />
+              <label for="kKey" class="block text-sm font-medium text-body mb-1.5">Key</label>
+              <input id="kKey" type="text" bind:value={newKey} placeholder="home.hero.title" required class="themed-input w-full px-4 py-2.5 rounded-xl font-mono text-sm transition-all" />
             </div>
             <div>
-              <label for="kDesc" class="block text-sm font-medium text-surface-300 mb-1.5">Description</label>
-              <input id="kDesc" type="text" bind:value={newKeyDesc} placeholder="Optional description" class="w-full px-4 py-2.5 bg-surface-800/50 border border-surface-600/50 rounded-xl text-surface-100 focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all" />
+              <label for="kDesc" class="block text-sm font-medium text-body mb-1.5">Description</label>
+              <input id="kDesc" type="text" bind:value={newKeyDesc} placeholder="Optional description" class="themed-input w-full px-4 py-2.5 rounded-xl transition-all" />
             </div>
             <div class="flex gap-3 justify-end">
-              <button type="button" onclick={() => showAddKey = false} class="px-4 py-2 text-surface-400 hover:text-surface-200 text-sm">Cancel</button>
+              <button type="button" onclick={() => showAddKey = false} class="px-4 py-2 text-subtle hover:text-heading text-sm">Cancel</button>
               <button type="submit" class="px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-xl text-sm">Add</button>
             </div>
           </div>

@@ -3,6 +3,7 @@
   import { browser } from '$app/environment';
   import { goto } from '$app/navigation';
   import { auth } from '$lib/stores/auth';
+  import { theme } from '$lib/stores/theme';
   import Sidebar from '$lib/components/Sidebar.svelte';
   import Toast from '$lib/components/Toast.svelte';
   import '../app.css';
