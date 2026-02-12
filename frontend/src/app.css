@@ -25,7 +25,7 @@
   --bg-modal-overlay: rgba(0, 0, 0, 0.3);
   --bg-modal: #ffffff;
   --border-default: #e2e8f0;
-  --border-subtle: rgba(203, 213, 225, 0.5);
+  --border-subtle: rgba(203, 213, 225, 0.2);
   --text-primary: #0f172a;
   --text-secondary: #334155;
   --text-tertiary: #64748b;
@@ -40,8 +40,8 @@
 :root.dark {
   --bg-body: #020617;
   --bg-page: #0f172a;
-  --bg-card: rgba(15, 23, 42, 0.6);
-  --bg-card-hover: rgba(30, 41, 59, 0.6);
+  --bg-card: rgba(15, 23, 42, 0.9);
+  --bg-card-hover: rgba(30, 41, 59, 1);
   --bg-sidebar: rgba(15, 23, 42, 0.8);
   --bg-input: rgba(30, 41, 59, 0.5);
   --bg-elevated: #1e293b;
