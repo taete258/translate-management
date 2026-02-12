@@ -1,0 +1,134 @@
+package handlers
+
+import (
+	"context"
+
+	"translate-management/models"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+type TranslationHandler struct {
+	DB *pgxpool.Pool
+}
+
+func NewTranslationHandler(db *pgxpool.Pool) *TranslationHandler {
+	return &TranslationHandler{DB: db}
+}
+
+// Get returns all translations for a project as a grid
+func (h *TranslationHandler) Get(c *fiber.Ctx) error {
+	projectID := c.Params("id")
+	search := c.Query("search", "")
+
+	// Get all keys
+	keyQuery := `SELECT id, key, description FROM translation_keys WHERE project_id = $1`
+	keyArgs := []interface{}{projectID}
+	if search != "" {
+		keyQuery += ` AND key ILIKE $2`
+		keyArgs = append(keyArgs, "%"+search+"%")
+	}
+	keyQuery += ` ORDER BY key ASC`
+
+	keyRows, err := h.DB.Query(context.Background(), keyQuery, keyArgs...)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch keys"})
+	}
+	defer keyRows.Close()
+
+	entries := []models.TranslationEntry{}
+	keyIDs := []string{}
+
+	for keyRows.Next() {
+		var keyID, key, desc string
+		if err := keyRows.Scan(&keyID, &key, &desc); err != nil {
+			continue
+		}
+		entries = append(entries, models.TranslationEntry{
+			KeyID:       keyID,
+			Key:         key,
+			Description: desc,
+			Values:      make(map[string]string),
+		})
+		keyIDs = append(keyIDs, keyID)
+	}
+
+	if len(keyIDs) == 0 {
+		return c.JSON(entries)
+	}
+
+	// Get all translations for these keys
+	tRows, err := h.DB.Query(context.Background(),
+		`SELECT t.key_id, t.language_id, t.value
+		 FROM translations t
+		 JOIN translation_keys tk ON t.key_id = tk.id
+		 WHERE tk.project_id = $1`,
+		projectID,
+	)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch translations"})
+	}
+	defer tRows.Close()
+
+	// Build a map for quick lookup
+	translationMap := make(map[string]map[string]string) // key_id -> language_id -> value
+	for tRows.Next() {
+		var keyID, langID, value string
+		if err := tRows.Scan(&keyID, &langID, &value); err != nil {
+			continue
+		}
+		if translationMap[keyID] == nil {
+			translationMap[keyID] = make(map[string]string)
+		}
+		translationMap[keyID][langID] = value
+	}
+
+	// Merge translations into entries
+	for i := range entries {
+		if vals, ok := translationMap[entries[i].KeyID]; ok {
+			entries[i].Values = vals
+		}
+	}
+
+	return c.JSON(entries)
+}
+
+// BatchUpdate updates multiple translations at once
+func (h *TranslationHandler) BatchUpdate(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(string)
+
+	var req models.BatchTranslationUpdate
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	if len(req.Translations) == 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "No translations provided"})
+	}
+
+	tx, err := h.DB.Begin(context.Background())
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to begin transaction"})
+	}
+	defer tx.Rollback(context.Background())
+
+	for _, t := range req.Translations {
+		_, err := tx.Exec(context.Background(),
+			`INSERT INTO translations (key_id, language_id, value, updated_by) 
+			 VALUES ($1, $2, $3, $4) 
+			 ON CONFLICT (key_id, language_id) 
+			 DO UPDATE SET value = EXCLUDED.value, updated_at = NOW(), updated_by = EXCLUDED.updated_by`,
+			t.KeyID, t.LanguageID, t.Value, userID,
+		)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to update translation"})
+		}
+	}
+
+	if err := tx.Commit(context.Background()); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to commit transaction"})
+	}
+
+	return c.JSON(fiber.Map{"message": "Translations updated", "count": len(req.Translations)})
+}
