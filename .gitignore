@@ -40,3 +40,6 @@ go.work.sum
 
 # Logs
 *.log
+
+# API Collection
+/api-collection/translation-management/environments/

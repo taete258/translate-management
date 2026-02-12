@@ -21,8 +21,12 @@ func Setup(app *fiber.App, db *pgxpool.Pool, rdb *cache.RedisClient, cfg *config
 	cacheHandler := handlers.NewCacheHandler(db, rdb)
 	exportHandler := handlers.NewExportHandler(db, rdb)
 	importHandler := handlers.NewImportHandler(db)
+	projectExportHandler := handlers.NewProjectExportHandler(db)
 
 	api := app.Group("/api")
+	// Export routes (API key auth)
+	export := api.Group("/export", middleware.APIKeyAuth(db))
+	export.Get("/:slug/:langCode", exportHandler.Export)
 
 	// Auth routes (public)
 	auth := api.Group("/auth")
@@ -33,11 +37,10 @@ func Setup(app *fiber.App, db *pgxpool.Pool, rdb *cache.RedisClient, cfg *config
 	auth.Post("/logout", middleware.AuthRequired(cfg), authHandler.Logout)
 	auth.Get("/me", middleware.AuthRequired(cfg), authHandler.Me)
 
-	// Protected routes
-	protected := api.Group("", middleware.AuthRequired(cfg))
 
+    // Protected routes
 	// Projects
-	projects := protected.Group("/projects")
+	projects := api.Group("/projects",middleware.AuthRequired(cfg))
 	projects.Get("/", projectHandler.List)
 	projects.Post("/", projectHandler.Create)
 	projects.Get("/:id", projectHandler.Get)
@@ -64,6 +67,9 @@ func Setup(app *fiber.App, db *pgxpool.Pool, rdb *cache.RedisClient, cfg *config
 	// Import
 	projects.Post("/:id/import", importHandler.Import)
 
+	// Project Export (JWT protected, for frontend download)
+	projects.Get("/:id/export/:langCode", projectExportHandler.ExportLanguage)
+
 	// API keys
 	projects.Get("/:id/api-keys", apiKeyHandler.List)
 	projects.Post("/:id/api-keys", apiKeyHandler.Create)
@@ -72,8 +78,4 @@ func Setup(app *fiber.App, db *pgxpool.Pool, rdb *cache.RedisClient, cfg *config
 	// Cache management
 	projects.Post("/:id/cache/invalidate", cacheHandler.Invalidate)
 	projects.Get("/:id/cache/status", cacheHandler.Status)
-
-	// Export routes (API key auth)
-	export := api.Group("/export", middleware.APIKeyAuth(db))
-	export.Get("/:slug/:langCode", exportHandler.Export)
 }

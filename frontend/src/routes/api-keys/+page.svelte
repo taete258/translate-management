@@ -73,18 +73,18 @@
 
 <div class="space-y-6">
   <div>
-    <h1 class="text-3xl font-bold text-surface-100">API Keys</h1>
-    <p class="text-surface-400 mt-1">Generate API keys to access translations from your applications</p>
+    <h1 class="text-3xl font-bold text-heading">API Keys</h1>
+    <p class="text-subtle mt-1">Generate API keys to access translations from your applications</p>
   </div>
 
   <!-- Project Selector -->
   <div class="flex items-center gap-4">
-    <label for="projSelect" class="text-sm text-surface-400">Project:</label>
+    <label for="projSelect" class="text-sm text-subtle">Project:</label>
     <select
       id="projSelect"
       bind:value={selectedProjectId}
       onchange={handleProjectChange}
-      class="px-4 py-2 bg-surface-800/50 border border-surface-700/50 rounded-xl text-surface-100 focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all"
+      class="themed-input px-4 py-2 rounded-xl transition-all"
     >
       {#each projects as p}
         <option value={p.id}>{p.name}</option>
@@ -101,17 +101,17 @@
   <!-- New key display -->
   {#if newRawKey}
     <div class="bg-emerald-900/30 border border-emerald-500/30 rounded-2xl p-4">
-      <p class="text-sm text-emerald-400 font-medium mb-2">🔑 New API Key (copy it now — it won't be shown again)</p>
+      <p class="text-sm text-emerald-500 font-medium mb-2">🔑 New API Key (copy it now — it won't be shown again)</p>
       <div class="flex items-center gap-2">
-        <code class="flex-1 px-3 py-2 bg-surface-900/80 rounded-lg text-emerald-300 text-sm font-mono break-all">{newRawKey}</code>
+        <code class="flex-1 px-3 py-2 rounded-lg text-emerald-400 text-sm font-mono break-all" style="background: var(--bg-input);">{newRawKey}</code>
         <button
           onclick={() => copyToClipboard(newRawKey)}
-          class="px-3 py-2 bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 rounded-xl text-sm transition-all"
+          class="px-3 py-2 bg-emerald-600/20 text-emerald-500 hover:bg-emerald-600/30 rounded-xl text-sm transition-all"
         >Copy</button>
       </div>
-      <div class="mt-3 text-xs text-surface-400">
-        <p><strong>Usage:</strong> Add <code class="text-surface-300">X-API-Key: {newRawKey.slice(0, 12)}...</code> header to your requests</p>
-        <p class="mt-1"><strong>Endpoint:</strong> <code class="text-surface-300">GET /api/export/&#123;slug&#125;/&#123;lang_code&#125;?format=json</code></p>
+      <div class="mt-3 text-xs text-subtle">
+        <p><strong>Usage:</strong> Add <code class="text-heading">X-API-Key: {newRawKey.slice(0, 12)}...</code> header to your requests</p>
+        <p class="mt-1"><strong>Endpoint:</strong> <code class="text-heading">GET /api/export/&#123;slug&#125;/&#123;lang_code&#125;?format=json</code></p>
       </div>
     </div>
   {/if}
@@ -122,37 +122,37 @@
       <div class="animate-spin w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full"></div>
     </div>
   {:else if apiKeys.length === 0}
-    <div class="text-center py-16 bg-surface-900/40 rounded-2xl border border-surface-700/30">
-      <p class="text-surface-400 text-lg mb-2">No API keys</p>
-      <p class="text-surface-500 text-sm">Generate a key to access translations via API</p>
+    <div class="themed-card text-center py-16 rounded-2xl">
+      <p class="text-subtle text-lg mb-2">No API keys</p>
+      <p class="text-faint text-sm">Generate a key to access translations via API</p>
     </div>
   {:else}
     <div class="space-y-3">
       {#each apiKeys as key}
-        <div class="bg-surface-900/60 backdrop-blur-xl border border-surface-700/50 rounded-2xl p-5 flex items-center gap-4">
+        <div class="themed-card backdrop-blur-xl rounded-2xl p-5 flex items-center gap-4">
           <div class="w-10 h-10 rounded-xl bg-primary-600/20 flex items-center justify-center text-lg shrink-0">
             🔑
           </div>
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2">
-              <h3 class="font-medium text-surface-200">{key.name}</h3>
-              <span class="text-xs px-2 py-0.5 rounded-full {key.is_active ? 'bg-emerald-600/20 text-emerald-400' : 'bg-red-600/20 text-red-400'}">
+              <h3 class="font-medium text-heading">{key.name}</h3>
+              <span class="text-xs px-2 py-0.5 rounded-full {key.is_active ? 'bg-emerald-600/20 text-emerald-500' : 'bg-red-600/20 text-red-500'}">
                 {key.is_active ? 'Active' : 'Inactive'}
               </span>
             </div>
             <div class="flex items-center gap-4 mt-1">
-              <span class="text-xs text-surface-500 font-mono">{key.key_prefix}...</span>
-              <span class="text-xs text-surface-500">Scopes: {key.scopes?.join(', ') || 'read'}</span>
+              <span class="text-xs text-faint font-mono">{key.key_prefix}...</span>
+              <span class="text-xs text-faint">Scopes: {key.scopes?.join(', ') || 'read'}</span>
               {#if key.last_used_at}
-                <span class="text-xs text-surface-500">Last used: {new Date(key.last_used_at).toLocaleDateString()}</span>
+                <span class="text-xs text-faint">Last used: {new Date(key.last_used_at).toLocaleDateString()}</span>
               {/if}
-              <span class="text-xs text-surface-500">Created: {new Date(key.created_at).toLocaleDateString()}</span>
+              <span class="text-xs text-faint">Created: {new Date(key.created_at).toLocaleDateString()}</span>
             </div>
           </div>
           {#if key.is_active}
             <button
               onclick={() => deactivateKey(key.id)}
-              class="px-3 py-1.5 text-red-400 hover:bg-red-500/10 border border-red-500/20 rounded-lg text-sm transition-all"
+              class="px-3 py-1.5 text-red-500 hover:bg-red-500/10 border border-red-500/20 rounded-lg text-sm transition-all"
             >
               Deactivate
             </button>
@@ -166,24 +166,24 @@
 <!-- Create Modal -->
 {#if showCreate}
   <div class="fixed inset-0 z-50 flex items-center justify-center">
-    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick={() => showCreate = false}></div>
-    <div class="relative bg-surface-900 border border-surface-700/50 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
-      <h2 class="text-xl font-bold text-surface-100 mb-4">Generate API Key</h2>
+    <button class="themed-modal-overlay absolute inset-0 backdrop-blur-sm" aria-label="show create modal" onclick={() => showCreate = false}></button>
+    <div class="themed-modal relative rounded-2xl p-6 w-full max-w-sm">
+      <h2 class="text-xl font-bold text-heading mb-4">Generate API Key</h2>
       <form onsubmit={(e) => { e.preventDefault(); createKey(); showCreate = false; }}>
         <div class="space-y-4">
           <div>
-            <label for="keyName" class="block text-sm font-medium text-surface-300 mb-1.5">Key Name</label>
+            <label for="keyName" class="block text-sm font-medium text-body mb-1.5">Key Name</label>
             <input
               id="keyName"
               type="text"
               bind:value={newKeyName}
               placeholder="e.g. Production Frontend"
               required
-              class="w-full px-4 py-2.5 bg-surface-800/50 border border-surface-600/50 rounded-xl text-surface-100 focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all"
+              class="themed-input w-full px-4 py-2.5 rounded-xl transition-all"
             />
           </div>
           <div class="flex gap-3 justify-end">
-            <button type="button" onclick={() => showCreate = false} class="px-4 py-2 text-surface-400 hover:text-surface-200 text-sm">Cancel</button>
+            <button type="button" onclick={() => showCreate = false} class="px-4 py-2 text-subtle hover:text-heading text-sm">Cancel</button>
             <button type="submit" class="px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-xl text-sm">Generate</button>
           </div>
         </div>

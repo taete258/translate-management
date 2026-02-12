@@ -83,8 +83,8 @@
 <div class="space-y-6">
   <div class="flex items-center justify-between">
     <div>
-      <h1 class="text-3xl font-bold text-surface-100">Projects</h1>
-      <p class="text-surface-400 mt-1">Manage your translation projects</p>
+      <h1 class="text-3xl font-bold text-heading">Projects</h1>
+      <p class="text-subtle mt-1">Manage your translation projects</p>
     </div>
     <button
       onclick={openCreate}
@@ -99,7 +99,7 @@
     type="text"
     bind:value={search}
     placeholder="Search projects..."
-    class="w-full max-w-md px-4 py-2.5 bg-surface-800/50 border border-surface-700/50 rounded-xl text-surface-100 placeholder-surface-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all"
+    class="themed-input w-full max-w-md px-4 py-2.5 rounded-xl transition-all"
   />
 
   <!-- Projects Grid -->
@@ -108,38 +108,38 @@
       <div class="animate-spin w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full"></div>
     </div>
   {:else if filteredProjects.length === 0}
-    <div class="text-center py-20 bg-surface-900/40 rounded-2xl border border-surface-700/30">
-      <p class="text-surface-400 text-lg">No projects found</p>
-      <p class="text-surface-500 text-sm mt-1">Create your first project to get started</p>
+    <div class="themed-card text-center py-20 rounded-2xl">
+      <p class="text-subtle text-lg">No projects found</p>
+      <p class="text-faint text-sm mt-1">Create your first project to get started</p>
     </div>
   {:else}
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {#each filteredProjects as project}
-        <div class="bg-surface-900/60 backdrop-blur-xl border border-surface-700/50 rounded-2xl p-5 hover:border-surface-600/50 transition-all group">
+        <div class="themed-card backdrop-blur-xl rounded-2xl p-5 transition-all group">
           <div class="flex items-start justify-between mb-3">
             <a href="/projects/{project.id}" class="flex-1">
-              <h3 class="font-semibold text-surface-200 group-hover:text-primary-400 transition-colors">{project.name}</h3>
-              <p class="text-xs text-surface-500 mt-0.5 font-mono">{project.slug}</p>
+              <h3 class="font-semibold text-heading group-hover:text-primary-500 transition-colors">{project.name}</h3>
+              <p class="text-xs text-faint mt-0.5 font-mono">{project.slug}</p>
             </a>
             <div class="flex gap-1">
               <button
                 onclick={() => openEdit(project)}
-                class="p-1.5 text-surface-500 hover:text-surface-300 hover:bg-surface-700/50 rounded-lg transition-all text-sm"
+                class="p-1.5 text-faint hover:text-heading rounded-lg transition-all text-sm"
                 title="Edit"
               >✏️</button>
               <button
                 onclick={() => handleDelete(project)}
-                class="p-1.5 text-surface-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all text-sm"
+                class="p-1.5 text-faint hover:text-red-500 rounded-lg transition-all text-sm"
                 title="Delete"
               >🗑️</button>
             </div>
           </div>
-          <p class="text-sm text-surface-400 mb-4 line-clamp-2">{project.description || 'No description'}</p>
+          <p class="text-sm text-subtle mb-4 line-clamp-2">{project.description || 'No description'}</p>
           <div class="flex items-center justify-between">
-            <span class="text-xs text-surface-500">{new Date(project.created_at).toLocaleDateString()}</span>
+            <span class="text-xs text-faint">{new Date(project.created_at).toLocaleDateString()}</span>
             <a
               href="/projects/{project.id}"
-              class="text-xs text-primary-400 hover:text-primary-300 transition-colors"
+              class="text-xs text-primary-500 hover:text-primary-400 transition-colors"
             >Open →</a>
           </div>
         </div>
@@ -151,35 +151,35 @@
 <!-- Create/Edit Modal -->
 {#if showCreate}
   <div class="fixed inset-0 z-50 flex items-center justify-center">
-    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick={() => showCreate = false}></div>
-    <div class="relative bg-surface-900 border border-surface-700/50 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-      <h2 class="text-xl font-bold text-surface-100 mb-4">{editingProject ? 'Edit' : 'New'} Project</h2>
+    <button class="themed-modal-overlay absolute inset-0 backdrop-blur-sm" aria-label="Hide create modal" onclick={() => showCreate = false}></button>
+    <div class="themed-modal relative rounded-2xl p-6 w-full max-w-md">
+      <h2 class="text-xl font-bold text-heading mb-4">{editingProject ? 'Edit' : 'New'} Project</h2>
       <form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
         <div class="space-y-4">
           <div>
-            <label for="projName" class="block text-sm font-medium text-surface-300 mb-1.5">Name</label>
+            <label for="projName" class="block text-sm font-medium text-body mb-1.5">Name</label>
             <input
               id="projName"
               type="text"
               bind:value={formName}
               required
-              class="w-full px-4 py-2.5 bg-surface-800/50 border border-surface-600/50 rounded-xl text-surface-100 focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all"
+              class="themed-input w-full px-4 py-2.5 rounded-xl transition-all"
             />
           </div>
           <div>
-            <label for="projDesc" class="block text-sm font-medium text-surface-300 mb-1.5">Description</label>
+            <label for="projDesc" class="block text-sm font-medium text-body mb-1.5">Description</label>
             <textarea
               id="projDesc"
               bind:value={formDescription}
               rows={3}
-              class="w-full px-4 py-2.5 bg-surface-800/50 border border-surface-600/50 rounded-xl text-surface-100 focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all resize-none"
+              class="themed-input w-full px-4 py-2.5 rounded-xl transition-all resize-none"
             ></textarea>
           </div>
           <div class="flex gap-3 justify-end">
             <button
               type="button"
               onclick={() => showCreate = false}
-              class="px-4 py-2 text-surface-400 hover:text-surface-200 transition-colors text-sm"
+              class="px-4 py-2 text-subtle hover:text-heading transition-colors text-sm"
             >Cancel</button>
             <button
               type="submit"

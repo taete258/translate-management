@@ -8,6 +8,7 @@ interface RequestOptions {
   method?: string;
   body?: unknown;
   headers?: Record<string, string>;
+  responseType?: "json" | "blob" | "text";
 }
 
 class ApiClient {
@@ -23,7 +24,12 @@ class ApiClient {
   }
 
   async request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
-    const { method = "GET", body, headers = {} } = options;
+    const {
+      method = "GET",
+      body,
+      headers = {},
+      responseType = "json",
+    } = options;
     const token = this.getToken();
 
     const config: RequestInit = {
@@ -55,11 +61,19 @@ class ApiClient {
       return {} as T;
     }
 
+    if (responseType === "blob") {
+      return response.blob() as Promise<T>;
+    }
+
+    if (responseType === "text") {
+      return response.text() as Promise<T>;
+    }
+
     return response.json();
   }
 
-  get<T>(endpoint: string) {
-    return this.request<T>(endpoint);
+  get<T>(endpoint: string, options: RequestOptions = {}) {
+    return this.request<T>(endpoint, { ...options, method: "GET" });
   }
 
   post<T>(endpoint: string, body?: unknown) {
