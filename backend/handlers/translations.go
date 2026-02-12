@@ -20,6 +20,13 @@ func NewTranslationHandler(db *pgxpool.Pool) *TranslationHandler {
 // Get returns all translations for a project as a grid
 func (h *TranslationHandler) Get(c *fiber.Ctx) error {
 	projectID := c.Params("id")
+	userID := c.Locals("user_id").(string)
+
+	// Verify project ownership
+	var exists bool
+	if err := h.DB.QueryRow(context.Background(), "SELECT EXISTS(SELECT 1 FROM projects WHERE id = $1 AND created_by = $2)", projectID, userID).Scan(&exists); err != nil || !exists {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Project not found"})
+	}
 	search := c.Query("search", "")
 
 	// Get all keys
@@ -96,7 +103,14 @@ func (h *TranslationHandler) Get(c *fiber.Ctx) error {
 
 // BatchUpdate updates multiple translations at once
 func (h *TranslationHandler) BatchUpdate(c *fiber.Ctx) error {
+	projectID := c.Params("id")
 	userID := c.Locals("user_id").(string)
+
+	// Verify project ownership
+	var exists bool
+	if err := h.DB.QueryRow(context.Background(), "SELECT EXISTS(SELECT 1 FROM projects WHERE id = $1 AND created_by = $2)", projectID, userID).Scan(&exists); err != nil || !exists {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Project not found"})
+	}
 
 	var req models.BatchTranslationUpdate
 	if err := c.BodyParser(&req); err != nil {

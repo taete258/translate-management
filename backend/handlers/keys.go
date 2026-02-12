@@ -20,6 +20,13 @@ func NewKeyHandler(db *pgxpool.Pool) *KeyHandler {
 // List returns all translation keys for a project
 func (h *KeyHandler) List(c *fiber.Ctx) error {
 	projectID := c.Params("id")
+	userID := c.Locals("user_id").(string)
+
+	// Verify project ownership
+	var exists bool
+	if err := h.DB.QueryRow(context.Background(), "SELECT EXISTS(SELECT 1 FROM projects WHERE id = $1 AND created_by = $2)", projectID, userID).Scan(&exists); err != nil || !exists {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Project not found"})
+	}
 	search := c.Query("search", "")
 
 	query := `SELECT id, project_id, key, description, created_at, updated_at 
@@ -53,6 +60,13 @@ func (h *KeyHandler) List(c *fiber.Ctx) error {
 // Create adds a new translation key
 func (h *KeyHandler) Create(c *fiber.Ctx) error {
 	projectID := c.Params("id")
+	userID := c.Locals("user_id").(string)
+
+	// Verify project ownership
+	var exists bool
+	if err := h.DB.QueryRow(context.Background(), "SELECT EXISTS(SELECT 1 FROM projects WHERE id = $1 AND created_by = $2)", projectID, userID).Scan(&exists); err != nil || !exists {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Project not found"})
+	}
 
 	var req models.CreateKeyRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -81,6 +95,13 @@ func (h *KeyHandler) Create(c *fiber.Ctx) error {
 // Update updates a translation key
 func (h *KeyHandler) Update(c *fiber.Ctx) error {
 	projectID := c.Params("id")
+	userID := c.Locals("user_id").(string)
+
+	// Verify project ownership
+	var exists bool
+	if err := h.DB.QueryRow(context.Background(), "SELECT EXISTS(SELECT 1 FROM projects WHERE id = $1 AND created_by = $2)", projectID, userID).Scan(&exists); err != nil || !exists {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Project not found"})
+	}
 	keyID := c.Params("keyId")
 
 	var req models.UpdateKeyRequest
@@ -110,6 +131,13 @@ func (h *KeyHandler) Update(c *fiber.Ctx) error {
 // Delete removes a translation key
 func (h *KeyHandler) Delete(c *fiber.Ctx) error {
 	projectID := c.Params("id")
+	userID := c.Locals("user_id").(string)
+
+	// Verify project ownership
+	var exists bool
+	if err := h.DB.QueryRow(context.Background(), "SELECT EXISTS(SELECT 1 FROM projects WHERE id = $1 AND created_by = $2)", projectID, userID).Scan(&exists); err != nil || !exists {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Project not found"})
+	}
 	keyID := c.Params("keyId")
 
 	result, err := h.DB.Exec(context.Background(),

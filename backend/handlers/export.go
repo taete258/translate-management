@@ -46,6 +46,7 @@ func (h *ExportHandler) Export(c *fiber.Ctx) error {
 	}
 
 	// Get project ID from slug
+	// Get project ID from slug
 	var projectID string
 	err = h.DB.QueryRow(context.Background(),
 		`SELECT id FROM projects WHERE slug = $1`, slug,
@@ -53,6 +54,12 @@ func (h *ExportHandler) Export(c *fiber.Ctx) error {
 
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Project not found"})
+	}
+
+	// Verify API key belongs to this project
+	authProjectID := c.Locals("project_id")
+	if authProjectID != nil && authProjectID.(string) != projectID {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "API key does not belong to this project"})
 	}
 
 	// Get language ID

@@ -20,6 +20,13 @@ func NewLanguageHandler(db *pgxpool.Pool) *LanguageHandler {
 // List returns all languages for a project
 func (h *LanguageHandler) List(c *fiber.Ctx) error {
 	projectID := c.Params("id")
+	userID := c.Locals("user_id").(string)
+
+	// Verify project ownership
+	var exists bool
+	if err := h.DB.QueryRow(context.Background(), "SELECT EXISTS(SELECT 1 FROM projects WHERE id = $1 AND created_by = $2)", projectID, userID).Scan(&exists); err != nil || !exists {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Project not found"})
+	}
 
 	rows, err := h.DB.Query(context.Background(),
 		`SELECT id, project_id, code, name, is_default, created_at 
@@ -46,6 +53,13 @@ func (h *LanguageHandler) List(c *fiber.Ctx) error {
 // Create adds a new language to a project
 func (h *LanguageHandler) Create(c *fiber.Ctx) error {
 	projectID := c.Params("id")
+	userID := c.Locals("user_id").(string)
+
+	// Verify project ownership
+	var exists bool
+	if err := h.DB.QueryRow(context.Background(), "SELECT EXISTS(SELECT 1 FROM projects WHERE id = $1 AND created_by = $2)", projectID, userID).Scan(&exists); err != nil || !exists {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Project not found"})
+	}
 
 	var req models.CreateLanguageRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -81,6 +95,13 @@ func (h *LanguageHandler) Create(c *fiber.Ctx) error {
 // Update updates a language
 func (h *LanguageHandler) Update(c *fiber.Ctx) error {
 	projectID := c.Params("id")
+	userID := c.Locals("user_id").(string)
+
+	// Verify project ownership
+	var exists bool
+	if err := h.DB.QueryRow(context.Background(), "SELECT EXISTS(SELECT 1 FROM projects WHERE id = $1 AND created_by = $2)", projectID, userID).Scan(&exists); err != nil || !exists {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Project not found"})
+	}
 	langID := c.Params("langId")
 
 	var req models.UpdateLanguageRequest
@@ -112,6 +133,13 @@ func (h *LanguageHandler) Update(c *fiber.Ctx) error {
 // Delete removes a language
 func (h *LanguageHandler) Delete(c *fiber.Ctx) error {
 	projectID := c.Params("id")
+	userID := c.Locals("user_id").(string)
+
+	// Verify project ownership
+	var exists bool
+	if err := h.DB.QueryRow(context.Background(), "SELECT EXISTS(SELECT 1 FROM projects WHERE id = $1 AND created_by = $2)", projectID, userID).Scan(&exists); err != nil || !exists {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Project not found"})
+	}
 	langID := c.Params("langId")
 
 	result, err := h.DB.Exec(context.Background(),
