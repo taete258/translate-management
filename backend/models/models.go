@@ -25,6 +25,12 @@ type Project struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
+// ProjectWithRole includes the user's role in the project
+type ProjectWithRole struct {
+	Project
+	Role string `json:"role"`
+}
+
 // Language represents a language within a project
 type Language struct {
 	ID        string    `json:"id"`
@@ -81,4 +87,25 @@ type ProjectStats struct {
 	TotalKeys       int                `json:"total_keys"`
 	TotalLanguages  int                `json:"total_languages"`
 	LanguageProgress map[string]float64 `json:"language_progress"` // language_code -> percentage
+}
+
+// ProjectMember represents a user who is a member of a project
+type ProjectMember struct {
+	ID        string    `json:"id"`
+	ProjectID string    `json:"project_id"`
+	UserID    string    `json:"user_id"`
+	Role      string    `json:"role"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// ProjectInvitation represents an invitation to join a project
+type ProjectInvitation struct {
+	ID        string    `json:"id"`
+	ProjectID string    `json:"project_id"`
+	Email     string    `json:"email"`
+	Role      string    `json:"role"`
+	InvitedBy string    `json:"invited_by"`
+	Status    string    `json:"status"`
+	CreatedAt time.Time `json:"created_at"`
+	ExpiresAt time.Time `json:"expires_at"`
 }

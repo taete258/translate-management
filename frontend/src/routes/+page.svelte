@@ -1,21 +1,44 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { api } from '$lib/api/client';
-  import type { Project } from '$lib/types';
-  import { Folder, Globe, Key, ArrowRight } from 'lucide-svelte';
+  import type { Project, ProjectInvitation } from '$lib/types';
+  import { Folder, Globe, Key, ArrowRight, Mail, Check, X } from 'lucide-svelte';
+  import { toasts } from '$lib/stores/toast';
 
   let projects = $state<Project[]>([]);
+  let invitations = $state<ProjectInvitation[]>([]);
   let loading = $state(true);
 
   onMount(async () => {
     try {
-      projects = await api.get<Project[]>('/api/projects');
+      const [p, i] = await Promise.all([
+        api.get<Project[]>('/api/projects'),
+        api.get<ProjectInvitation[]>('/api/invitations')
+      ]);
+      projects = p;
+      invitations = i;
     } catch {
       // silent
     } finally {
       loading = false;
     }
   });
+
+  async function respond(invitation: ProjectInvitation, accept: boolean) {
+    try {
+      await api.post(`/api/invitations/${invitation.id}/respond`, { accept });
+      toasts.success(`Invitation ${accept ? 'accepted' : 'rejected'}`);
+      // Refresh
+      const [p, i] = await Promise.all([
+        api.get<Project[]>('/api/projects'),
+        api.get<ProjectInvitation[]>('/api/invitations')
+      ]);
+      projects = p;
+      invitations = i;
+    } catch (err: any) {
+      toasts.error(err.message || 'Failed to respond');
+    }
+  }
 </script>
 
 <div class="space-y-8">
@@ -24,6 +47,44 @@
     <h1 class="text-3xl font-bold text-heading">Dashboard</h1>
     <p class="text-subtle mt-1">Overview of your translation projects</p>
   </div>
+
+  {#if invitations.length > 0}
+    <div class="themed-card backdrop-blur-xl rounded-2xl p-6 border-l-4 border-l-blue-500">
+      <h2 class="text-lg font-semibold text-heading mb-4 flex items-center gap-2">
+        <Mail size={20} class="text-blue-500" /> Pending Invitations
+      </h2>
+      <div class="space-y-3">
+        {#each invitations as inv}
+          <div class="flex items-center justify-between p-4 rounded-xl" style="background: var(--bg-input);">
+            <div>
+              <p class="text-sm font-medium text-heading">
+                You were invited to join <span class="text-primary-500">{inv.project_name}</span>
+              </p>
+              <p class="text-xs text-faint mt-0.5">
+                Invited by {inv.inviter_name} as <span class="capitalize">{inv.role}</span> · {new Date(inv.created_at).toLocaleDateString()}
+              </p>
+            </div>
+            <div class="flex gap-2">
+              <button
+                onclick={() => respond(inv, false)}
+                class="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                title="Reject"
+              >
+                <X size={18} />
+              </button>
+              <button
+                onclick={() => respond(inv, true)}
+                class="px-3 py-1.5 bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5"
+                title="Accept"
+              >
+                <Check size={16} /> Accept
+              </button>
+            </div>
+          </div>
+        {/each}
+      </div>
+    </div>
+  {/if}
 
   <!-- Stats Grid -->
   <div class="grid grid-cols-1 md:grid-cols-3 gap-4">

@@ -63,7 +63,7 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create user"})
 	}
 
-	token, err := middleware.GenerateToken(user.ID, user.Username, h.Cfg)
+	token, err := middleware.GenerateToken(user.ID, user.Username, user.Email, h.Cfg)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to generate token"})
 	}
@@ -100,7 +100,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid credentials"})
 	}
 
-	token, err := middleware.GenerateToken(user.ID, user.Username, h.Cfg)
+	token, err := middleware.GenerateToken(user.ID, user.Username, user.Email, h.Cfg)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to generate token"})
 	}
