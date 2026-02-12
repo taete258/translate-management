@@ -110,6 +110,10 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
+  button {
+    cursor: pointer;
+  }
 }
 
 /* ── Utility classes for themed elements ── */
