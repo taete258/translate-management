@@ -166,7 +166,7 @@
 <!-- Create Modal -->
 {#if showCreate}
   <div class="fixed inset-0 z-50 flex items-center justify-center">
-    <div class="themed-modal-overlay absolute inset-0 backdrop-blur-sm" onclick={() => showCreate = false}></div>
+    <button class="themed-modal-overlay absolute inset-0 backdrop-blur-sm" aria-label="show create modal" onclick={() => showCreate = false}></button>
     <div class="themed-modal relative rounded-2xl p-6 w-full max-w-sm">
       <h2 class="text-xl font-bold text-heading mb-4">Generate API Key</h2>
       <form onsubmit={(e) => { e.preventDefault(); createKey(); showCreate = false; }}>

@@ -335,7 +335,7 @@
   <!-- Add Language Modal -->
   {#if showAddLang}
     <div class="fixed inset-0 z-50 flex items-center justify-center">
-      <div class="themed-modal-overlay absolute inset-0 backdrop-blur-sm" onclick={() => showAddLang = false}></div>
+      <button class="themed-modal-overlay absolute inset-0 backdrop-blur-sm" aria-label="Close" onclick={() => showAddLang = false}></button>
       <div class="themed-modal relative rounded-2xl p-6 w-full max-w-sm">
         <h2 class="text-xl font-bold text-heading mb-4">Add Language</h2>
         <form onsubmit={(e) => { e.preventDefault(); addLanguage(); }}>
@@ -365,7 +365,7 @@
   <!-- Add Key Modal -->
   {#if showAddKey}
     <div class="fixed inset-0 z-50 flex items-center justify-center">
-      <div class="themed-modal-overlay absolute inset-0 backdrop-blur-sm" onclick={() => showAddKey = false}></div>
+      <button class="themed-modal-overlay absolute inset-0 backdrop-blur-sm" aria-label="Close" onclick={() => showAddKey = false}></button>
       <div class="themed-modal relative rounded-2xl p-6 w-full max-w-sm">
         <h2 class="text-xl font-bold text-heading mb-4">Add Translation Key</h2>
         <form onsubmit={(e) => { e.preventDefault(); addKey(); }}>
