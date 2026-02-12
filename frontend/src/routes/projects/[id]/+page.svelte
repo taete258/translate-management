@@ -4,7 +4,7 @@
   import { api } from '$lib/api/client';
   import { toasts } from '$lib/stores/toast';
   import type { Project, Language, TranslationEntry, ProjectStats, CacheStatus } from '$lib/types';
-  import { ChevronDown } from 'lucide-svelte';
+  import { ChevronDown, ArrowLeft, RefreshCcw, Plus, Star, X, Globe, Trash2, Download } from 'lucide-svelte';
 
   const projectId = $derived(page.params.id);
 
@@ -203,7 +203,9 @@
     <div class="flex items-start justify-between">
       <div>
         <div class="flex items-center gap-2 mb-1">
-          <a href="/projects" class="text-faint hover:text-heading text-sm transition-colors">← Projects</a>
+          <a href="/projects" class="text-faint hover:text-heading text-sm transition-colors flex items-center gap-1">
+            <ArrowLeft size={16} /> Projects
+          </a>
         </div>
         <h1 class="text-3xl font-bold text-heading">{project.name}</h1>
         <p class="text-subtle mt-1">{project.description || project.slug}</p>
@@ -231,7 +233,7 @@
                   <span class="animate-spin inline-block w-3.5 h-3.5 border-2 border-violet-400 border-t-transparent rounded-full"></span>
                   Exporting...
                 {:else}
-                  📦 Export
+                  <Download size={14} /> Export
                   <ChevronDown size={14} class="transition-transform {showExportMenu ? 'rotate-180' : ''}" />
                 {/if}
               </button>
@@ -287,7 +289,9 @@
             class="px-3 py-2 bg-amber-600/20 text-amber-500 hover:bg-amber-600/30 border border-amber-500/30 rounded-xl text-sm transition-all"
             title="Force invalidate cache"
           >
-            🔄 Invalidate Cache
+            <span class="flex items-center gap-1.5">
+              <RefreshCcw size={14} /> Invalidate Cache
+            </span>
           </button>
         </div>
       </div>
@@ -326,13 +330,17 @@
       {#if languages.length > 0}
         <button
           onclick={() => showAddKey = true}
-          class="px-3 py-2 bg-primary-600/20 text-primary-500 hover:bg-primary-600/30 border border-primary-500/30 rounded-xl text-sm transition-all"
-        >+ Add Key</button>
+          class="px-3 py-2 bg-primary-600/20 text-primary-500 hover:bg-primary-600/30 border border-primary-500/30 rounded-xl text-sm transition-all flex items-center gap-1.5"
+        >
+          <Plus size={14} /> Add Key
+        </button>
       {/if}
       <button
         onclick={() => showAddLang = true}
-        class="px-3 py-2 bg-emerald-600/20 text-emerald-500 hover:bg-emerald-600/30 border border-emerald-500/30 rounded-xl text-sm transition-all"
-      >+ Add Language</button>
+        class="px-3 py-2 bg-emerald-600/20 text-emerald-500 hover:bg-emerald-600/30 border border-emerald-500/30 rounded-xl text-sm transition-all flex items-center gap-1.5"
+      >
+        <Plus size={14} /> Add Language
+      </button>
 
       {#if pendingChanges.size > 0}
         <button
@@ -354,13 +362,15 @@
             <span class="text-body">{lang.name}</span>
             <span class="text-faint font-mono text-xs">({lang.code})</span>
             {#if lang.is_default}
-              <span class="text-xs text-primary-500">★</span>
+              <Star size={12} class="text-primary-500 fill-current" />
             {/if}
             <button
               onclick={() => deleteLanguage(lang)}
               class="text-faint hover:text-red-500 transition-colors ml-1"
               title="Remove"
-            >×</button>
+            >
+              <X size={14} />
+            </button>
           </span>
         {/each}
       </div>
@@ -369,14 +379,16 @@
     <!-- Translation Grid -->
     {#if languages.length === 0}
       <div class="themed-card text-center py-16 rounded-2xl">
-        <p class="text-4xl mb-3">🌐</p>
+        <div class="mb-3 flex justify-center text-subtle">
+           <Globe size={40} />
+        </div>
         <p class="text-subtle text-lg mb-2">No languages added yet</p>
         <p class="text-faint text-sm mb-4">Add at least one language before creating translation keys</p>
         <button
           onclick={() => showAddLang = true}
-          class="inline-flex px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors text-sm"
+          class="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors text-sm"
         >
-          + Add Your First Language
+          <Plus size={14} /> Add Your First Language
         </button>
       </div>
     {:else if entries.length === 0}
@@ -427,7 +439,9 @@
                     onclick={() => deleteKey(entry.key_id, entry.key)}
                     class="p-1 text-faint hover:text-red-500 rounded transition-all"
                     title="Delete key"
-                  >🗑️</button>
+                  >
+                    <Trash2 size={16} />
+                  </button>
                 </td>
               </tr>
             {/each}
