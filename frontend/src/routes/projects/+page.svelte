@@ -4,6 +4,7 @@
   import { api } from '$lib/api/client';
   import { toasts } from '$lib/stores/toast';
   import type { Project } from '$lib/types';
+  import { LayoutGrid, List, Pencil, Trash2, ExternalLink } from 'lucide-svelte';
 
   let projects = $state<Project[]>([]);
   let loading = $state(true);
@@ -96,14 +97,14 @@
           class="p-2 rounded-lg transition-all {viewMode === 'grid' ? 'bg-[var(--bg-elevated)] shadow-sm text-primary-600' : 'text-subtle hover:text-heading'}"
           title="Grid View"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          <LayoutGrid size={18} />
         </button>
         <button
           onclick={() => viewMode = 'table'}
           class="p-2 rounded-lg transition-all {viewMode === 'table' ? 'bg-[var(--bg-elevated)] shadow-sm text-primary-600' : 'text-subtle hover:text-heading'}"
           title="Table View"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+          <List size={18} />
         </button>
       </div>
 
@@ -157,14 +158,14 @@
                 class="p-2 backdrop-blur-sm text-primary-600 bg-[var(--bg-elevated)] rounded-lg shadow-sm"
                 title="Edit"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                <Pencil size={14} />
               </button>
               <button
                 onclick={(e) => { e.preventDefault(); e.stopPropagation(); handleDelete(project); }}
                 class="p-2 backdrop-blur-sm text-red-500 bg-[var(--bg-elevated)] rounded-lg shadow-sm"
                 title="Delete"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                <Trash2 size={14} />
               </button>
             </div>
 
@@ -222,21 +223,21 @@
                         class="p-2 text-primary-600 bg-primary-500/10 rounded-lg"
                         title="Edit Project"
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                        <Pencil size={16} />
                       </button>
                       <button
                         onclick={() => handleDelete(project)}
                         class="p-2 text-red-500 bg-red-500/10 rounded-lg"
                         title="Delete Project"
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        <Trash2 size={16} />
                       </button>
                       <a 
                         href="/projects/{project.id}"
                         class="p-2 text-subtle hover:text-primary-600 hover:bg-primary-500/10 rounded-lg transition-all"
                         title="Open Project"
                       >
-                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                       <ExternalLink size={16} />
                       </a>
                     </div>
                   </td>

@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { api } from '$lib/api/client';
   import type { Project } from '$lib/types';
+  import { Folder, Globe, Key, ArrowRight } from 'lucide-svelte';
 
   let projects = $state<Project[]>([]);
   let loading = $state(true);
@@ -28,7 +29,9 @@
   <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
     <div class="themed-card backdrop-blur-xl rounded-2xl p-6">
       <div class="flex items-center gap-4">
-        <div class="w-12 h-12 rounded-xl bg-primary-600/20 flex items-center justify-center text-2xl">📁</div>
+        <div class="w-12 h-12 rounded-xl bg-primary-600/20 flex items-center justify-center text-primary-600">
+          <Folder size={24} />
+        </div>
         <div>
           <p class="text-sm text-subtle">Total Projects</p>
           <p class="text-2xl font-bold text-heading">{loading ? '...' : projects.length}</p>
@@ -38,7 +41,9 @@
 
     <div class="themed-card backdrop-blur-xl rounded-2xl p-6">
       <div class="flex items-center gap-4">
-        <div class="w-12 h-12 rounded-xl bg-emerald-600/20 flex items-center justify-center text-2xl">🌐</div>
+        <div class="w-12 h-12 rounded-xl bg-emerald-600/20 flex items-center justify-center text-emerald-600">
+          <Globe size={24} />
+        </div>
         <div>
           <p class="text-sm text-subtle">Active Translations</p>
           <p class="text-2xl font-bold text-heading">{loading ? '...' : projects.length > 0 ? 'Active' : 'None'}</p>
@@ -48,7 +53,9 @@
 
     <div class="themed-card backdrop-blur-xl rounded-2xl p-6">
       <div class="flex items-center gap-4">
-        <div class="w-12 h-12 rounded-xl bg-amber-600/20 flex items-center justify-center text-2xl">🔑</div>
+        <div class="w-12 h-12 rounded-xl bg-amber-600/20 flex items-center justify-center text-amber-600">
+          <Key size={24} />
+        </div>
         <div>
           <p class="text-sm text-subtle">API Integration</p>
           <p class="text-2xl font-bold text-heading">Ready</p>
@@ -63,8 +70,8 @@
       <h2 class="text-lg font-semibold text-heading">Recent Projects</h2>
       <a
         href="/projects"
-        class="text-sm text-primary-500 hover:text-primary-400 transition-colors"
-      >View all →</a>
+        class="text-sm text-primary-500 hover:text-primary-400 transition-colors flex items-center gap-1 group"
+      >View all <ArrowRight size={14} class="group-hover:translate-x-0.5 transition-transform" /></a>
     </div>
 
     {#if loading}
@@ -96,7 +103,9 @@
               <h3 class="font-medium text-heading">{project.name}</h3>
               <p class="text-sm text-faint">{project.slug} · {project.description || 'No description'}</p>
             </div>
-            <span class="text-faint group-hover:text-heading transition-colors">→</span>
+            <span class="text-faint group-hover:text-heading transition-colors">
+              <ArrowRight size={16} />
+            </span>
           </a>
         {/each}
       </div>

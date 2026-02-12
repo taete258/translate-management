@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Toast } from '$lib/stores/toast';
   import { toasts } from '$lib/stores/toast';
+  import { CheckCircle, XCircle, Info, AlertTriangle, X } from 'lucide-svelte';
 
   const typeStyles: Record<Toast['type'], string> = {
     success: 'bg-emerald-600/90 border-emerald-400/50 text-white',
@@ -9,11 +10,11 @@
     warning: 'bg-amber-600/90 border-amber-400/50 text-white',
   };
 
-  const icons: Record<Toast['type'], string> = {
-    success: '✓',
-    error: '✕',
-    info: 'ℹ',
-    warning: '⚠',
+  const icons: Record<Toast['type'], any> = {
+    success: CheckCircle,
+    error: XCircle,
+    info: Info,
+    warning: AlertTriangle,
   };
 </script>
 
@@ -23,13 +24,15 @@
       class="flex items-center gap-3 px-4 py-3 rounded-xl border backdrop-blur-sm shadow-2xl animate-slide-in {typeStyles[toast.type]}"
       role="alert"
     >
-      <span class="text-lg font-bold">{icons[toast.type]}</span>
+      <span class="text-lg font-bold">
+        <svelte:component this={icons[toast.type]} size={20} />
+      </span>
       <span class="flex-1 text-sm font-medium">{toast.message}</span>
       <button
         class="opacity-60 hover:opacity-100 transition-opacity text-lg"
         onclick={() => toasts.dismiss(toast.id)}
       >
-        ✕
+        <X size={18} />
       </button>
     </div>
   {/each}

@@ -4,6 +4,7 @@
   import { api } from '$lib/api/client';
   import { toasts } from '$lib/stores/toast';
   import type { Project, Language, TranslationEntry, ProjectStats, CacheStatus } from '$lib/types';
+  import { ChevronDown } from 'lucide-svelte';
 
   const projectId = $derived(page.params.id);
 
@@ -231,9 +232,7 @@
                   Exporting...
                 {:else}
                   📦 Export
-                  <svg class="w-3.5 h-3.5 transition-transform {showExportMenu ? 'rotate-180' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                  </svg>
+                  <ChevronDown size={14} class="transition-transform {showExportMenu ? 'rotate-180' : ''}" />
                 {/if}
               </button>
 

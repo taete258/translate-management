@@ -1,5 +1,6 @@
 <script lang="ts">
   import { theme } from '$lib/stores/theme';
+  import { Sun, Moon } from 'lucide-svelte';
 </script>
 
 <button
@@ -9,8 +10,12 @@
   aria-label="Toggle theme"
 >
   <div class="toggle-track" class:dark={$theme === 'dark'}>
-    <span class="toggle-icon sun">☀️</span>
-    <span class="toggle-icon moon">🌙</span>
+    <span class="toggle-icon sun">
+      <Sun size={14} color="white" />
+    </span>
+    <span class="toggle-icon moon">
+      <Moon size={14} color="white" />
+    </span>
     <div class="toggle-thumb" class:dark={$theme === 'dark'}></div>
   </div>
 </button>
