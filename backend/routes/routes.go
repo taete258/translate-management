@@ -21,6 +21,7 @@ func Setup(app *fiber.App, db *pgxpool.Pool, rdb *cache.RedisClient, cfg *config
 	cacheHandler := handlers.NewCacheHandler(db, rdb)
 	exportHandler := handlers.NewExportHandler(db, rdb)
 	importHandler := handlers.NewImportHandler(db)
+	projectExportHandler := handlers.NewProjectExportHandler(db)
 
 	api := app.Group("/api")
 
@@ -63,6 +64,9 @@ func Setup(app *fiber.App, db *pgxpool.Pool, rdb *cache.RedisClient, cfg *config
 
 	// Import
 	projects.Post("/:id/import", importHandler.Import)
+
+	// Project Export (JWT protected, for frontend download)
+	projects.Get("/:id/export/:langCode", projectExportHandler.ExportLanguage)
 
 	// API keys
 	projects.Get("/:id/api-keys", apiKeyHandler.List)

@@ -17,6 +17,10 @@
   let search = $state('');
   let pendingChanges = $state<Map<string, string>>(new Map());
 
+  // Export
+  let showExportMenu = $state(false);
+  let exporting = $state(false);
+
   // Language management
   let showAddLang = $state(false);
   let langCode = $state('');
@@ -151,7 +155,42 @@
       toasts.error(err.message || 'Failed to invalidate cache');
     }
   }
+
+  async function exportTranslations(langCode: string, format: 'json' | 'msgpack') {
+    exporting = true;
+    showExportMenu = false;
+    try {
+      const blob = await api.get<Blob>(
+        `/api/projects/${projectId}/export/${langCode}?format=${format}`,
+        { responseType: 'blob' }
+      );
+      const ext = format === 'msgpack' ? 'msgpack' : 'json';
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${project?.slug || 'translations'}_${langCode}.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toasts.success(`Exported ${langCode} as ${format.toUpperCase()}`);
+    } catch (err: any) {
+      toasts.error(err.message || 'Export failed');
+    } finally {
+      exporting = false;
+    }
+  }
+
+  function handleClickOutsideExport(event: MouseEvent) {
+    const target = event.target as HTMLElement;
+    if (!target.closest('.export-dropdown')) {
+      showExportMenu = false;
+    }
+  }
 </script>
+
+<svelte:window onclick={handleClickOutsideExport} />
 
 {#if loading}
   <div class="flex items-center justify-center py-20">
@@ -177,6 +216,73 @@
               {cacheStatus.cached ? `Cached (${cacheStatus.cached_keys})` : 'Not cached'}
             </span>
           {/if}
+
+          <!-- Export Dropdown -->
+          {#if languages.length > 0}
+            <div class="relative export-dropdown">
+              <button
+                onclick={() => showExportMenu = !showExportMenu}
+                disabled={exporting}
+                class="px-3 py-2 bg-violet-600/20 text-violet-400 hover:bg-violet-600/30 border border-violet-500/30 rounded-xl text-sm transition-all disabled:opacity-50 flex items-center gap-1.5"
+                title="Export translations"
+              >
+                {#if exporting}
+                  <span class="animate-spin inline-block w-3.5 h-3.5 border-2 border-violet-400 border-t-transparent rounded-full"></span>
+                  Exporting...
+                {:else}
+                  📦 Export
+                  <svg class="w-3.5 h-3.5 transition-transform {showExportMenu ? 'rotate-180' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                {/if}
+              </button>
+
+              {#if showExportMenu}
+                <!-- svelte-ignore a11y_no_static_element_interactions -->
+                <div
+                  class="absolute right-0 top-full mt-2 w-72 rounded-2xl shadow-2xl z-50 overflow-hidden"
+                  style="background: var(--bg-modal); border: 1px solid var(--border-subtle);"
+                >
+                  <div class="px-4 py-3" style="border-bottom: 1px solid var(--border-subtle);">
+                    <p class="text-sm font-semibold text-heading">Export Translations</p>
+                    <p class="text-xs text-faint mt-0.5">Select language &amp; format</p>
+                  </div>
+                  <div class="max-h-64 overflow-y-auto">
+                    {#each languages as lang}
+                      <div class="px-4 py-2.5 flex items-center justify-between gap-2 transition-colors"
+                        style="border-bottom: 1px solid var(--border-subtle);"
+                      >
+                        <div class="flex items-center gap-2 min-w-0">
+                          <span class="text-sm text-body truncate">{lang.name}</span>
+                          <span class="text-xs font-mono text-faint">({lang.code})</span>
+                          {#if lang.is_default}
+                            <span class="text-xs text-primary-500">★</span>
+                          {/if}
+                        </div>
+                        <div class="flex gap-1.5 shrink-0">
+                          <button
+                            onclick={() => exportTranslations(lang.code, 'json')}
+                            class="px-2.5 py-1 text-xs font-medium rounded-lg bg-blue-600/15 text-blue-400 hover:bg-blue-600/30 border border-blue-500/20 hover:border-blue-500/40 transition-all"
+                            title="Export as JSON"
+                          >
+                            JSON
+                          </button>
+                          <button
+                            onclick={() => exportTranslations(lang.code, 'msgpack')}
+                            class="px-2.5 py-1 text-xs font-medium rounded-lg bg-orange-600/15 text-orange-400 hover:bg-orange-600/30 border border-orange-500/20 hover:border-orange-500/40 transition-all"
+                            title="Export as MessagePack"
+                          >
+                            MsgPack
+                          </button>
+                        </div>
+                      </div>
+                    {/each}
+                  </div>
+                </div>
+              {/if}
+            </div>
+          {/if}
+
           <button
             onclick={invalidateCache}
             class="px-3 py-2 bg-amber-600/20 text-amber-500 hover:bg-amber-600/30 border border-amber-500/30 rounded-xl text-sm transition-all"
