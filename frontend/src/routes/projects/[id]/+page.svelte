@@ -34,10 +34,10 @@
     )
   );
 
-  onMount(loadAll);
+  onMount(() => loadAll(true));
 
-  async function loadAll() {
-    loading = true;
+  async function loadAll(initial = false) {
+    if (initial) loading = true;
     try {
       const [p, l, t, s] = await Promise.all([
         api.get<Project>(`/api/projects/${projectId}`),
@@ -78,6 +78,7 @@
       pendingChanges = new Map();
       // Refresh stats
       stats = await api.get<ProjectStats>(`/api/projects/${projectId}/stats`);
+      entries = await api.get<TranslationEntry[]>(`/api/projects/${projectId}/translations`);
     } catch (err: any) {
       toasts.error(err.message || 'Save failed');
     } finally {
@@ -217,10 +218,12 @@
         placeholder="Search keys..."
         class="px-4 py-2 bg-surface-800/50 border border-surface-700/50 rounded-xl text-surface-100 placeholder-surface-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all text-sm w-64"
       />
-      <button
-        onclick={() => showAddKey = true}
-        class="px-3 py-2 bg-primary-600/20 text-primary-400 hover:bg-primary-600/30 border border-primary-500/30 rounded-xl text-sm transition-all"
-      >+ Add Key</button>
+      {#if languages.length > 0}
+        <button
+          onclick={() => showAddKey = true}
+          class="px-3 py-2 bg-primary-600/20 text-primary-400 hover:bg-primary-600/30 border border-primary-500/30 rounded-xl text-sm transition-all"
+        >+ Add Key</button>
+      {/if}
       <button
         onclick={() => showAddLang = true}
         class="px-3 py-2 bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 border border-emerald-500/30 rounded-xl text-sm transition-all"
@@ -260,8 +263,15 @@
     <!-- Translation Grid -->
     {#if languages.length === 0}
       <div class="text-center py-16 bg-surface-900/40 rounded-2xl border border-surface-700/30">
-        <p class="text-surface-400 text-lg mb-2">No languages added</p>
-        <p class="text-surface-500 text-sm">Add a language to start translating</p>
+        <p class="text-4xl mb-3">🌐</p>
+        <p class="text-surface-400 text-lg mb-2">No languages added yet</p>
+        <p class="text-surface-500 text-sm mb-4">Add at least one language before creating translation keys</p>
+        <button
+          onclick={() => showAddLang = true}
+          class="inline-flex px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors text-sm"
+        >
+          + Add Your First Language
+        </button>
       </div>
     {:else if entries.length === 0}
       <div class="text-center py-16 bg-surface-900/40 rounded-2xl border border-surface-700/30">
