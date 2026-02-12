@@ -21,6 +21,13 @@ func NewCacheHandler(db *pgxpool.Pool, rdb *cache.RedisClient) *CacheHandler {
 // Invalidate force-purges the cache for a project
 func (h *CacheHandler) Invalidate(c *fiber.Ctx) error {
 	projectID := c.Params("id")
+	userID := c.Locals("user_id").(string)
+
+	// Verify project ownership
+	var exists bool
+	if err := h.DB.QueryRow(context.Background(), "SELECT EXISTS(SELECT 1 FROM projects WHERE id = $1 AND created_by = $2)", projectID, userID).Scan(&exists); err != nil || !exists {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Project not found"})
+	}
 
 	// Get project slug for cache key pattern
 	var slug string
@@ -46,6 +53,13 @@ func (h *CacheHandler) Invalidate(c *fiber.Ctx) error {
 // Status returns cache status for a project
 func (h *CacheHandler) Status(c *fiber.Ctx) error {
 	projectID := c.Params("id")
+	userID := c.Locals("user_id").(string)
+
+	// Verify project ownership
+	var exists bool
+	if err := h.DB.QueryRow(context.Background(), "SELECT EXISTS(SELECT 1 FROM projects WHERE id = $1 AND created_by = $2)", projectID, userID).Scan(&exists); err != nil || !exists {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Project not found"})
+	}
 
 	var slug string
 	err := h.DB.QueryRow(context.Background(),

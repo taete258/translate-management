@@ -24,6 +24,12 @@ func (h *ImportHandler) Import(c *fiber.Ctx) error {
 	projectID := c.Params("id")
 	userID := c.Locals("user_id").(string)
 
+	// Verify project ownership
+	var exists bool
+	if err := h.DB.QueryRow(context.Background(), "SELECT EXISTS(SELECT 1 FROM projects WHERE id = $1 AND created_by = $2)", projectID, userID).Scan(&exists); err != nil || !exists {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Project not found"})
+	}
+
 	var req models.ImportRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})

@@ -24,6 +24,13 @@ func NewAPIKeyHandler(db *pgxpool.Pool) *APIKeyHandler {
 // List returns all API keys for a project
 func (h *APIKeyHandler) List(c *fiber.Ctx) error {
 	projectID := c.Params("id")
+	userID := c.Locals("user_id").(string)
+
+	// Verify project ownership
+	var exists bool
+	if err := h.DB.QueryRow(context.Background(), "SELECT EXISTS(SELECT 1 FROM projects WHERE id = $1 AND created_by = $2)", projectID, userID).Scan(&exists); err != nil || !exists {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Project not found"})
+	}
 
 	rows, err := h.DB.Query(context.Background(),
 		`SELECT id, project_id, name, key_prefix, scopes, is_active, last_used_at, created_at 
@@ -50,6 +57,13 @@ func (h *APIKeyHandler) List(c *fiber.Ctx) error {
 // Create generates a new API key
 func (h *APIKeyHandler) Create(c *fiber.Ctx) error {
 	projectID := c.Params("id")
+	userID := c.Locals("user_id").(string)
+
+	// Verify project ownership
+	var exists bool
+	if err := h.DB.QueryRow(context.Background(), "SELECT EXISTS(SELECT 1 FROM projects WHERE id = $1 AND created_by = $2)", projectID, userID).Scan(&exists); err != nil || !exists {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Project not found"})
+	}
 
 	var req models.CreateAPIKeyRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -96,6 +110,13 @@ func (h *APIKeyHandler) Create(c *fiber.Ctx) error {
 // Delete deactivates an API key
 func (h *APIKeyHandler) Delete(c *fiber.Ctx) error {
 	projectID := c.Params("id")
+	userID := c.Locals("user_id").(string)
+
+	// Verify project ownership
+	var exists bool
+	if err := h.DB.QueryRow(context.Background(), "SELECT EXISTS(SELECT 1 FROM projects WHERE id = $1 AND created_by = $2)", projectID, userID).Scan(&exists); err != nil || !exists {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Project not found"})
+	}
 	keyID := c.Params("keyId")
 
 	result, err := h.DB.Exec(context.Background(),

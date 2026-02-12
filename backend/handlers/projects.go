@@ -21,14 +21,15 @@ func NewProjectHandler(db *pgxpool.Pool) *ProjectHandler {
 
 // List returns all projects
 func (h *ProjectHandler) List(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(string)
 	search := c.Query("search", "")
 
 	var rows interface{ Close() }
-	query := `SELECT id, name, slug, description, created_by, created_at, updated_at FROM projects`
-	args := []interface{}{}
+	query := `SELECT id, name, slug, description, created_by, created_at, updated_at FROM projects WHERE created_by = $1`
+	args := []interface{}{userID}
 
 	if search != "" {
-		query += ` WHERE name ILIKE $1 OR slug ILIKE $1`
+		query += ` AND (name ILIKE $2 OR slug ILIKE $2)`
 		args = append(args, "%"+search+"%")
 	}
 	query += ` ORDER BY created_at DESC`
@@ -55,11 +56,12 @@ func (h *ProjectHandler) List(c *fiber.Ctx) error {
 // Get returns a single project by ID
 func (h *ProjectHandler) Get(c *fiber.Ctx) error {
 	id := c.Params("id")
+	userID := c.Locals("user_id").(string)
 
 	var p models.Project
 	err := h.DB.QueryRow(context.Background(),
-		`SELECT id, name, slug, description, created_by, created_at, updated_at FROM projects WHERE id = $1`,
-		id,
+		`SELECT id, name, slug, description, created_by, created_at, updated_at FROM projects WHERE id = $1 AND created_by = $2`,
+		id, userID,
 	).Scan(&p.ID, &p.Name, &p.Slug, &p.Description, &p.CreatedBy, &p.CreatedAt, &p.UpdatedAt)
 
 	if err != nil {
@@ -102,6 +104,7 @@ func (h *ProjectHandler) Create(c *fiber.Ctx) error {
 // Update updates a project
 func (h *ProjectHandler) Update(c *fiber.Ctx) error {
 	id := c.Params("id")
+	userID := c.Locals("user_id").(string)
 
 	var req models.UpdateProjectRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -115,9 +118,9 @@ func (h *ProjectHandler) Update(c *fiber.Ctx) error {
 	var p models.Project
 	err := h.DB.QueryRow(context.Background(),
 		`UPDATE projects SET name = $1, description = $2, updated_at = NOW() 
-		 WHERE id = $3 
+		 WHERE id = $3 AND created_by = $4
 		 RETURNING id, name, slug, description, created_by, created_at, updated_at`,
-		req.Name, req.Description, id,
+		req.Name, req.Description, id, userID,
 	).Scan(&p.ID, &p.Name, &p.Slug, &p.Description, &p.CreatedBy, &p.CreatedAt, &p.UpdatedAt)
 
 	if err != nil {
@@ -130,8 +133,9 @@ func (h *ProjectHandler) Update(c *fiber.Ctx) error {
 // Delete removes a project
 func (h *ProjectHandler) Delete(c *fiber.Ctx) error {
 	id := c.Params("id")
+	userID := c.Locals("user_id").(string)
 
-	result, err := h.DB.Exec(context.Background(), `DELETE FROM projects WHERE id = $1`, id)
+	result, err := h.DB.Exec(context.Background(), `DELETE FROM projects WHERE id = $1 AND created_by = $2`, id, userID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to delete project"})
 	}
@@ -146,6 +150,14 @@ func (h *ProjectHandler) Delete(c *fiber.Ctx) error {
 // Stats returns project statistics
 func (h *ProjectHandler) Stats(c *fiber.Ctx) error {
 	id := c.Params("id")
+	userID := c.Locals("user_id").(string)
+
+	// Validate ownership
+	var exists bool
+	err := h.DB.QueryRow(context.Background(), "SELECT EXISTS(SELECT 1 FROM projects WHERE id = $1 AND created_by = $2)", id, userID).Scan(&exists)
+	if err != nil || !exists {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Project not found"})
+	}
 
 	var totalKeys, totalLangs int
 	_ = h.DB.QueryRow(context.Background(),

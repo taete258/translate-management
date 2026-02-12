@@ -20,6 +20,13 @@ func NewProjectExportHandler(db *pgxpool.Pool) *ProjectExportHandler {
 // ExportLanguage exports translations for a specific language in a project (JWT protected)
 func (h *ProjectExportHandler) ExportLanguage(c *fiber.Ctx) error {
 	projectID := c.Params("id")
+	userID := c.Locals("user_id").(string)
+
+	// Verify project ownership
+	var exists bool
+	if err := h.DB.QueryRow(context.Background(), "SELECT EXISTS(SELECT 1 FROM projects WHERE id = $1 AND created_by = $2)", projectID, userID).Scan(&exists); err != nil || !exists {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Project not found"})
+	}
 	langCode := c.Params("langCode")
 	format := c.Query("format", "json")
 
