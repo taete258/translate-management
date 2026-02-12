@@ -34,10 +34,10 @@
     )
   );
 
-  onMount(loadAll);
+  onMount(() => loadAll(true));
 
-  async function loadAll() {
-    loading = true;
+  async function loadAll(initial = false) {
+    if (initial) loading = true;
     try {
       const [p, l, t, s] = await Promise.all([
         api.get<Project>(`/api/projects/${projectId}`),
@@ -78,6 +78,7 @@
       pendingChanges = new Map();
       // Refresh stats
       stats = await api.get<ProjectStats>(`/api/projects/${projectId}/stats`);
+      entries = await api.get<TranslationEntry[]>(`/api/projects/${projectId}/translations`);
     } catch (err: any) {
       toasts.error(err.message || 'Save failed');
     } finally {
