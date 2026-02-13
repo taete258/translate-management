@@ -22,6 +22,7 @@ func main() {
 	cfg := config.Load()
 
 	db, err := database.Connect(cfg)
+	log.Println("Database config: ", cfg)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
