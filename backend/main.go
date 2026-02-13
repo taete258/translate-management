@@ -45,7 +45,7 @@ func main() {
 		Level: compress.LevelBestSpeed,
 	}))
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "http://localhost:5173",
+		AllowOrigins:     cfg.FrontendURL,
 		AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS",
 		AllowHeaders:     "Origin,Content-Type,Accept,Authorization,X-API-Key",
 		AllowCredentials: true,

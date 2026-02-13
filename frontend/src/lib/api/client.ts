@@ -1,8 +1,12 @@
 import { browser } from "$app/environment";
 
+import { env } from "$env/dynamic/public";
+
 const API_URL = browser
-  ? import.meta.env.PUBLIC_API_URL || "http://localhost:3000"
-  : "http://backend:3000";
+  ? env.PUBLIC_API_URL || "http://localhost:3000"
+  : // @ts-ignore
+    (typeof process !== "undefined" && process?.env?.INTERNAL_API_URL) ||
+    "http://backend:3000";
 
 interface RequestOptions {
   method?: string;
