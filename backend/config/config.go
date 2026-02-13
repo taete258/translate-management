@@ -1,6 +1,9 @@
 package config
 
-import "os"
+import (
+	"log"
+	"os"
+)
 
 type Config struct {
 	DBHost     string
@@ -32,7 +35,9 @@ func Load() *Config {
 
 func getEnv(key, fallback string) string {
 	if value, ok := os.LookupEnv(key); ok {
+		log.Println("Environment variable", key, "is set to", value)
 		return value
 	}
+	log.Println("Environment variable", key, "is not set, using fallback", fallback)
 	return fallback
 }
