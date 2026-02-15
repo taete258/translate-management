@@ -2,6 +2,7 @@
   import { page } from '$app/state';
   import { auth } from '$lib/stores/auth';
   import ThemeToggle from '$lib/components/ThemeToggle.svelte';
+  import ConfirmModal from '$lib/components/ConfirmModal.svelte';
   import { LayoutDashboard, Folder, Key, LogOut, ChevronLeft, ChevronRight } from 'lucide-svelte';
 
   const navItems = [
@@ -11,6 +12,7 @@
   ];
 
   let collapsed = $state(false);
+  let showLogoutConfirm = $state(false);
 </script>
 
 <aside
@@ -74,7 +76,7 @@
       </div>
     {/if}
     <button
-      onclick={() => auth.logout()}
+      onclick={() => showLogoutConfirm = true}
       class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-subtle hover:text-red-500 transition-all"
       onmouseenter={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
       onmouseleave={(e) => e.currentTarget.style.background = ''}
@@ -101,3 +103,13 @@
     {/if}
   </button>
 </aside>
+
+<ConfirmModal
+  bind:show={showLogoutConfirm}
+  title="Sign Out"
+  message="Are you sure you want to sign out of your account?"
+  confirmText="Sign Out"
+  type="danger"
+  onConfirm={() => auth.logout()}
+  onCancel={() => {}}
+/>
