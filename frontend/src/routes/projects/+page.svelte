@@ -3,6 +3,7 @@
   import { fade } from 'svelte/transition';
   import { api } from '$lib/api/client';
   import { toasts } from '$lib/stores/toast';
+  import ConfirmModal from '$lib/components/ConfirmModal.svelte';
   import type { Project } from '$lib/types';
   import { LayoutGrid, List, Pencil, Trash2, ExternalLink } from 'lucide-svelte';
 
@@ -14,6 +15,8 @@
   let formDescription = $state('');
   let search = $state('');
   let viewMode = $state<'grid' | 'table'>('grid');
+  let showDeleteConfirm = $state(false);
+  let projectToDelete = $state<Project | null>(null);
 
   const filteredProjects = $derived(
     projects.filter((p) =>
@@ -71,14 +74,21 @@
     }
   }
 
-  async function handleDelete(project: Project) {
-    if (!confirm(`Delete "${project.name}"? This will remove all translations.`)) return;
+  function handleDelete(project: Project) {
+    projectToDelete = project;
+    showDeleteConfirm = true;
+  }
+
+  async function confirmDelete() {
+    if (!projectToDelete) return;
     try {
-      await api.delete(`/api/projects/${project.id}`);
+      await api.delete(`/api/projects/${projectToDelete.id}`);
       toasts.success('Project deleted');
       await loadProjects();
     } catch (err: any) {
       toasts.error(err.message || 'Delete failed');
+    } finally {
+      projectToDelete = null;
     }
   }
 </script>
@@ -294,3 +304,13 @@
     </div>
   </div>
 {/if}
+
+<ConfirmModal
+  bind:show={showDeleteConfirm}
+  title="Delete Project"
+  message={`Are you sure you want to delete "${projectToDelete?.name}"? This will remove all translations and cannot be undone.`}
+  confirmText="Delete"
+  type="danger"
+  onConfirm={confirmDelete}
+  onCancel={() => projectToDelete = null}
+/>
