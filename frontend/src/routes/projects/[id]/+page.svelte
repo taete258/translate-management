@@ -4,7 +4,9 @@
   import { api } from '$lib/api/client';
   import { toasts } from '$lib/stores/toast';
   import type { Project, Language, TranslationEntry, ProjectStats, CacheStatus } from '$lib/types';
-  import { ChevronDown, ArrowLeft, RefreshCcw, Plus, Star, X, Globe, Trash2, Download, Users } from 'lucide-svelte';
+  import { ChevronDown, ArrowLeft, RefreshCcw, Plus, Star, X, Globe, Trash2, Download, Users, List, FolderTree } from 'lucide-svelte';
+  import { fade } from 'svelte/transition';
+  import KeyVisualizer from '$lib/components/KeyVisualizer.svelte';
 
   const projectId = $derived(page.params.id);
 
@@ -17,6 +19,7 @@
   let saving = $state(false);
   let search = $state('');
   let pendingChanges = $state<Map<string, string>>(new Map());
+  let viewMode = $state<'table' | 'visualizer'>('table');
 
   // Export
   let showExportMenu = $state(false);
@@ -389,12 +392,32 @@
 
     <!-- Toolbar -->
     <div class="flex items-center gap-3 flex-wrap">
+      <!-- Search -->
       <input
         type="text"
         bind:value={search}
         placeholder="Search keys..."
         class="themed-input px-4 py-2 rounded-xl text-sm w-64"
       />
+      
+      <!-- View Toggle -->
+      <div class="flex p-1 bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-xl">
+        <button
+            onclick={() => viewMode = 'table'}
+            class="p-1.5 rounded-lg transition-all {viewMode === 'table' ? 'bg-[var(--bg-modal)] text-heading shadow-sm' : 'text-faint hover:text-subtle'}"
+            title="Table View"
+        >
+            <List size={16} />
+        </button>
+        <button
+            onclick={() => viewMode = 'visualizer'}
+            class="p-1.5 rounded-lg transition-all {viewMode === 'visualizer' ? 'bg-[var(--bg-modal)] text-heading shadow-sm' : 'text-faint hover:text-subtle'}"
+            title="Tree View"
+        >
+            <FolderTree size={16} />
+        </button>
+      </div>
+
       {#if languages.length > 0 && canEdit}
         <button
           onclick={() => showAddKey = true}
@@ -423,7 +446,7 @@
       {/if}
     </div>
 
-    <!-- Languages list -->
+    <!-- Languages list (Horizontal badges - visible in both views) -->
     {#if languages.length > 0}
       <div class="flex gap-2 flex-wrap">
         {#each languages as lang}
@@ -448,7 +471,7 @@
       </div>
     {/if}
 
-    <!-- Translation Grid -->
+    <!-- Content Area -->
     {#if languages.length === 0}
       <div class="themed-card text-center py-16 rounded-2xl">
         <div class="mb-3 flex justify-center text-subtle">
@@ -469,60 +492,75 @@
         <p class="text-faint text-sm">Add keys to start managing translations</p>
       </div>
     {:else}
-      <div class="themed-card overflow-x-auto rounded-2xl">
-        <table class="w-full text-sm">
-          <thead>
-            <tr style="border-bottom: 1px solid var(--border-subtle);">
-              <th class="text-left px-4 py-3 text-subtle font-medium sticky left-0 min-w-[200px]"
-                style="background: var(--bg-modal);">Key</th>
-              {#each languages as lang}
-                <th class="text-left px-4 py-3 text-subtle font-medium min-w-[200px]">
-                  {lang.name} <span class="text-faint font-normal">({lang.code})</span>
-                </th>
-              {/each}
-              <th class="w-10"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {#each filteredEntries as entry}
-              <tr class="transition-colors" style="border-bottom: 1px solid var(--border-subtle);"
-                onmouseenter={(e) => e.currentTarget.style.background = 'var(--bg-card-hover)'}
-                onmouseleave={(e) => e.currentTarget.style.background = ''}>
-                <td class="px-4 py-2 sticky left-0" style="background: var(--bg-modal);">
-                  <div class="font-mono text-heading text-xs">{entry.key}</div>
-                  {#if entry.description}
-                    <div class="text-xs text-faint mt-0.5">{entry.description}</div>
-                  {/if}
-                </td>
-                {#each languages as lang}
-                  <td class="px-4 py-2">
-                    <input
-                      type="text"
-                      disabled={!canEdit}
-                      value={pendingChanges.get(`${entry.key_id}:${lang.id}`) ?? entry.values[lang.id] ?? ''}
-                      oninput={(e) => handleCellChange(entry.key_id, lang.id, (e.target as HTMLInputElement).value)}
-                      class="w-full px-2.5 py-1.5 bg-transparent border border-transparent rounded-lg text-sm focus:outline-none transition-all {pendingChanges.has(`${entry.key_id}:${lang.id}`) ? 'border-amber-500/40 bg-amber-500/5' : ''} disabled:opacity-50 disabled:cursor-not-allowed"
-                      style="color: var(--text-primary);"
-                      placeholder={canEdit ? "—" : ""}
-                    />
-                  </td>
-                {/each}
-                <td class="px-2 py-2">
-                  {#if canEdit}
-                    <button
-                      onclick={() => deleteKey(entry.key_id, entry.key)}
-                      class="p-1 text-faint hover:text-red-500 rounded transition-all"
-                      title="Delete key"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  {/if}
-                </td>
-              </tr>
-            {/each}
-          </tbody>
-        </table>
-      </div>
+        {#if viewMode === 'table'}
+            <div in:fade={{ duration: 200 }} class="themed-card overflow-x-auto rounded-2xl">
+                <table class="w-full text-sm">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--border-subtle);">
+                    <th class="text-left px-4 py-3 text-subtle font-medium sticky left-0 min-w-[200px]"
+                        style="background: var(--bg-modal);">Key</th>
+                    {#each languages as lang}
+                        <th class="text-left px-4 py-3 text-subtle font-medium min-w-[200px]">
+                        {lang.name} <span class="text-faint font-normal">({lang.code})</span>
+                        </th>
+                    {/each}
+                    <th class="w-10"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {#each filteredEntries as entry}
+                    <tr class="transition-colors" style="border-bottom: 1px solid var(--border-subtle);"
+                        onmouseenter={(e) => e.currentTarget.style.background = 'var(--bg-card-hover)'}
+                        onmouseleave={(e) => e.currentTarget.style.background = ''}>
+                        <td class="px-4 py-2 sticky left-0" style="background: var(--bg-modal);">
+                        <div class="font-mono text-heading text-xs">{entry.key}</div>
+                        {#if entry.description}
+                            <div class="text-xs text-faint mt-0.5">{entry.description}</div>
+                        {/if}
+                        </td>
+                        {#each languages as lang}
+                        <td class="px-4 py-2">
+                            <input
+                            type="text"
+                            disabled={!canEdit}
+                            value={pendingChanges.get(`${entry.key_id}:${lang.id}`) ?? entry.values[lang.id] ?? ''}
+                            oninput={(e) => handleCellChange(entry.key_id, lang.id, (e.target as HTMLInputElement).value)}
+                            class="w-full px-2.5 py-1.5 bg-transparent border border-transparent rounded-lg text-sm focus:outline-none transition-all {pendingChanges.has(`${entry.key_id}:${lang.id}`) ? 'border-amber-500/40 bg-amber-500/5' : ''} disabled:opacity-50 disabled:cursor-not-allowed"
+                            style="color: var(--text-primary);"
+                            placeholder={canEdit ? "—" : ""}
+                            />
+                        </td>
+                        {/each}
+                        <td class="px-2 py-2">
+                        {#if canEdit}
+                            <button
+                            onclick={() => deleteKey(entry.key_id, entry.key)}
+                            class="p-1 text-faint hover:text-red-500 rounded transition-all"
+                            title="Delete key"
+                            >
+                            <Trash2 size={16} />
+                            </button>
+                        {/if}
+                        </td>
+                    </tr>
+                    {/each}
+                </tbody>
+                </table>
+            </div>
+        {:else}
+            <!-- Visualizer View -->
+            <div in:fade={{ duration: 200 }} class="themed-card rounded-2xl p-2 min-h-[400px]">
+                <KeyVisualizer 
+                    entries={entries}
+                    languages={languages}
+                    search={search}
+                    canEdit={canEdit}
+                    pendingChanges={pendingChanges}
+                    onCellChange={handleCellChange}
+                    onDeleteKey={deleteKey}
+                />
+            </div>
+        {/if}
     {/if}
   </div>
 
