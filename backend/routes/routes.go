@@ -48,6 +48,7 @@ func Setup(app *fiber.App, db *pgxpool.Pool, rdb *cache.RedisClient, cfg *config
 	projects.Put("/:id", projectHandler.Update)
 	projects.Delete("/:id", projectHandler.Delete)
 	projects.Get("/:id/stats", projectHandler.Stats)
+	projects.Get("/:id/members", projectHandler.ListMembers)
 
 	// Languages
 	projects.Get("/:id/languages", languageHandler.List)

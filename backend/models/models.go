@@ -109,3 +109,13 @@ type ProjectInvitation struct {
 	CreatedAt time.Time `json:"created_at"`
 	ExpiresAt time.Time `json:"expires_at"`
 }
+
+// ProjectMemberInfo includes user details for a project member
+type ProjectMemberInfo struct {
+	UserID    string `json:"user_id"`
+	Email     string `json:"email"`
+	Name      string `json:"name"`
+	Username  string `json:"username"`
+	AvatarURL string `json:"avatar_url"`
+	Role      string `json:"role"`
+}
