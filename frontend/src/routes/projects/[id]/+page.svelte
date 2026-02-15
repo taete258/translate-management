@@ -3,7 +3,7 @@
   import { page } from '$app/state';
   import { api } from '$lib/api/client';
   import { toasts } from '$lib/stores/toast';
-  import type { Project, Language, TranslationEntry, ProjectStats, CacheStatus } from '$lib/types';
+  import type { Project, Language, TranslationEntry, ProjectStats, CacheStatus, ProjectMemberInfo } from '$lib/types';
   import { ChevronDown, ArrowLeft, RefreshCcw, Plus, Star, X, Globe, Trash2, Download, Users, List, FolderTree } from 'lucide-svelte';
   import { fade } from 'svelte/transition';
   import KeyVisualizer from '$lib/components/KeyVisualizer.svelte';
@@ -15,6 +15,7 @@
   let entries = $state<TranslationEntry[]>([]);
   let stats = $state<ProjectStats | null>(null);
   let cacheStatus = $state<CacheStatus | null>(null);
+  let members = $state<ProjectMemberInfo[]>([]);
   let loading = $state(true);
   let saving = $state(false);
   let search = $state('');
@@ -56,16 +57,18 @@
   async function loadAll(initial = false) {
     if (initial) loading = true;
     try {
-      const [p, l, t, s] = await Promise.all([
+      const [p, l, t, s, m] = await Promise.all([
         api.get<Project>(`/api/projects/${projectId}`),
         api.get<Language[]>(`/api/projects/${projectId}/languages`),
         api.get<TranslationEntry[]>(`/api/projects/${projectId}/translations`),
         api.get<ProjectStats>(`/api/projects/${projectId}/stats`),
+        api.get<ProjectMemberInfo[]>(`/api/projects/${projectId}/members`),
       ]);
       project = p;
       languages = l;
       entries = t;
       stats = s;
+      members = m;
       try {
         cacheStatus = await api.get<CacheStatus>(`/api/projects/${projectId}/cache/status`);
       } catch { /* ok */ }
@@ -269,7 +272,37 @@
             {project.role || 'viewer'}
           </span>
         </h1>
-        <p class="text-subtle mt-1">{project.description || project.slug}</p>
+        <div class="flex items-center gap-4 mt-1">
+          <p class="text-subtle">{project.description || project.slug}</p>
+          <div class="flex items-center -space-x-1.5">
+            {#each members.slice(0, 5) as member}
+              <div class="group relative">
+                <div 
+                  class="w-7 h-7 rounded-full border-2 border-[var(--bg-main)] bg-slate-700 flex items-center justify-center overflow-hidden shrink-0"
+                >
+                  {#if member.avatar_url}
+                    <img src={member.avatar_url} alt={member.name} class="w-full h-full object-cover" />
+                  {:else}
+                    <span class="text-[9px] font-bold text-white uppercase">{member.name.slice(0, 2)}</span>
+                  {/if}
+                </div>
+                <!-- Tooltip -->
+                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block px-2 py-1 bg-slate-900 text-white text-[10px] rounded shadow-xl whitespace-nowrap z-50 border border-slate-700 pointer-events-none">
+                  <div class="font-medium">{member.name}</div>
+                  <div class="text-[8px] text-slate-400 capitalize">{member.role}</div>
+                </div>
+              </div>
+            {/each}
+            {#if members.length > 5}
+              <div 
+                class="w-7 h-7 rounded-full border-2 border-[var(--bg-main)] bg-slate-800 flex items-center justify-center text-[9px] font-bold text-faint shrink-0"
+                title="{members.length - 5} more members"
+              >
+                +{members.length - 5}
+              </div>
+            {/if}
+          </div>
+        </div>
       </div>
       <div class="flex gap-2">
         <div class="flex items-center gap-2">

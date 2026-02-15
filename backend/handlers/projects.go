@@ -211,6 +211,60 @@ func (h *ProjectHandler) Stats(c *fiber.Ctx) error {
 	})
 }
 
+// ListMembers returns all members of a project
+func (h *ProjectHandler) ListMembers(c *fiber.Ctx) error {
+	id := c.Params("id")
+	userID := c.Locals("user_id").(string)
+
+	// Validate access
+	var exists bool
+	err := h.DB.QueryRow(context.Background(),
+		`SELECT EXISTS(
+			SELECT 1 FROM projects p 
+			LEFT JOIN project_members pm ON p.id = pm.project_id 
+			WHERE p.id = $1 AND (p.created_by = $2 OR pm.user_id = $2)
+		)`, id, userID).Scan(&exists)
+
+	if err != nil || !exists {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Project not found or access denied"})
+	}
+
+	// Fetch owner
+	var owner models.ProjectMemberInfo
+	err = h.DB.QueryRow(context.Background(),
+		`SELECT u.id, u.email, u.name, u.username, u.avatar_url, 'owner' as role
+		 FROM users u
+		 JOIN projects p ON p.created_by = u.id
+		 WHERE p.id = $1`, id).Scan(&owner.UserID, &owner.Email, &owner.Name, &owner.Username, &owner.AvatarURL, &owner.Role)
+
+	if err != nil {
+		log.Printf("Error fetching owner: %v", err)
+	}
+
+	// Fetch members
+	rows, err := h.DB.Query(context.Background(),
+		`SELECT u.id, u.email, u.name, u.username, u.avatar_url, pm.role
+		 FROM users u
+		 JOIN project_members pm ON pm.user_id = u.id
+		 WHERE pm.project_id = $1`, id)
+
+	members := []models.ProjectMemberInfo{}
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var m models.ProjectMemberInfo
+			if err := rows.Scan(&m.UserID, &m.Email, &m.Name, &m.Username, &m.AvatarURL, &m.Role); err == nil {
+				members = append(members, m)
+			}
+		}
+	}
+
+	// Combine owner and members
+	allMembers := append([]models.ProjectMemberInfo{owner}, members...)
+
+	return c.JSON(allMembers)
+}
+
 func generateSlug(name string) string {
 	slug := strings.ToLower(name)
 	reg := regexp.MustCompile(`[^a-z0-9]+`)

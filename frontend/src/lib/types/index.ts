@@ -95,3 +95,11 @@ export interface ProjectInvitation {
   project_name?: string;
   inviter_name?: string;
 }
+export interface ProjectMemberInfo {
+  user_id: string;
+  email: string;
+  name: string;
+  username: string;
+  avatar_url: string;
+  role: string;
+}
