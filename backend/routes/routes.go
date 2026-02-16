@@ -28,6 +28,7 @@ func Setup(app *fiber.App, db *pgxpool.Pool, rdb *cache.RedisClient, cfg *config
 	// Export routes (API key auth)
 	export := api.Group("/export", middleware.APIKeyAuth(db))
 	export.Get("/:slug/:langCode", exportHandler.Export)
+	export.Get("/:slug/:langCode/version", exportHandler.GetVersion)
 
 	// Auth routes (public)
 	auth := api.Group("/auth")
