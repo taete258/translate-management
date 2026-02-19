@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 
 	"translate-management/models"
 
@@ -35,12 +36,19 @@ func (h *TranslationHandler) Get(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Project not found or access denied"})
 	}
 	search := c.Query("search", "")
+	envID := c.Query("env_id", "")
 
-	// Get all keys
+	// Get all keys (optionally filtered by env)
 	keyQuery := `SELECT id, key, description FROM translation_keys WHERE project_id = $1`
 	keyArgs := []interface{}{projectID}
+	argIdx := 2
+	if envID != "" {
+		keyQuery += ` AND id IN (SELECT key_id FROM key_environments WHERE env_id = $` + fmt.Sprint(argIdx) + `)`
+		keyArgs = append(keyArgs, envID)
+		argIdx++
+	}
 	if search != "" {
-		keyQuery += ` AND key ILIKE $2`
+		keyQuery += ` AND key ILIKE $` + fmt.Sprint(argIdx)
 		keyArgs = append(keyArgs, "%"+search+"%")
 	}
 	keyQuery += ` ORDER BY key ASC`

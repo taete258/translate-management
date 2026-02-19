@@ -103,3 +103,11 @@ export interface ProjectMemberInfo {
   avatar_url: string;
   role: string;
 }
+
+export interface Environment {
+  id: string;
+  project_id: string;
+  name: string;
+  description: string;
+  created_at: string;
+}

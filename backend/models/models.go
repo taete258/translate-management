@@ -119,3 +119,12 @@ type ProjectMemberInfo struct {
 	AvatarURL string `json:"avatar_url"`
 	Role      string `json:"role"`
 }
+
+// Environment represents a deployment environment within a project (e.g. production, staging)
+type Environment struct {
+	ID          string    `json:"id"`
+	ProjectID   string    `json:"project_id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	CreatedAt   time.Time `json:"created_at"`
+}

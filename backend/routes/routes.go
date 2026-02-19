@@ -23,6 +23,7 @@ func Setup(app *fiber.App, db *pgxpool.Pool, rdb *cache.RedisClient, cfg *config
 	importHandler := handlers.NewImportHandler(db)
 	projectExportHandler := handlers.NewProjectExportHandler(db)
 	invitationHandler := handlers.NewInvitationHandler(db)
+	environmentHandler := handlers.NewEnvironmentHandler(db)
 
 	api := app.Group("/api")
 	// Export routes (API key auth)
@@ -86,4 +87,10 @@ func Setup(app *fiber.App, db *pgxpool.Pool, rdb *cache.RedisClient, cfg *config
 	projects.Post("/:id/invitations", invitationHandler.InviteUser)
 	api.Get("/invitations", middleware.AuthRequired(cfg), invitationHandler.GetInvitations)
 	api.Post("/invitations/:id/respond", middleware.AuthRequired(cfg), invitationHandler.RespondToInvitation)
+
+	// Environments
+	projects.Get("/:id/environments", environmentHandler.List)
+	projects.Post("/:id/environments", environmentHandler.Create)
+	projects.Put("/:id/environments/:envId", environmentHandler.Update)
+	projects.Delete("/:id/environments/:envId", environmentHandler.Delete)
 }
