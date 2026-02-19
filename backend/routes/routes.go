@@ -14,9 +14,9 @@ func Setup(app *fiber.App, db *pgxpool.Pool, rdb *cache.RedisClient, cfg *config
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(db, cfg)
 	projectHandler := handlers.NewProjectHandler(db)
-	languageHandler := handlers.NewLanguageHandler(db)
-	keyHandler := handlers.NewKeyHandler(db)
-	translationHandler := handlers.NewTranslationHandler(db)
+	languageHandler := handlers.NewLanguageHandler(db, rdb)
+	keyHandler := handlers.NewKeyHandler(db, rdb)
+	translationHandler := handlers.NewTranslationHandler(db, rdb)
 	apiKeyHandler := handlers.NewAPIKeyHandler(db)
 	cacheHandler := handlers.NewCacheHandler(db, rdb)
 	exportHandler := handlers.NewExportHandler(db, rdb)
@@ -81,6 +81,7 @@ func Setup(app *fiber.App, db *pgxpool.Pool, rdb *cache.RedisClient, cfg *config
 
 	// Cache management
 	projects.Post("/:id/cache/invalidate", cacheHandler.Invalidate)
+	projects.Post("/:id/cache/rebuild", cacheHandler.Rebuild)
 	projects.Get("/:id/cache/status", cacheHandler.Status)
 
 	// Invitations

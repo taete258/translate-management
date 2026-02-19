@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 
+	"translate-management/cache"
 	"translate-management/models"
 
 	"github.com/gofiber/fiber/v2"
@@ -10,11 +11,12 @@ import (
 )
 
 type LanguageHandler struct {
-	DB *pgxpool.Pool
+	DB    *pgxpool.Pool
+	Cache *cache.RedisClient
 }
 
-func NewLanguageHandler(db *pgxpool.Pool) *LanguageHandler {
-	return &LanguageHandler{DB: db}
+func NewLanguageHandler(db *pgxpool.Pool, rdb *cache.RedisClient) *LanguageHandler {
+	return &LanguageHandler{DB: db, Cache: rdb}
 }
 
 // List returns all languages for a project
@@ -111,6 +113,8 @@ func (h *LanguageHandler) Create(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create language. Code might already exist."})
 	}
 
+	h.invalidateCache(projectID)
+
 	return c.Status(fiber.StatusCreated).JSON(l)
 }
 
@@ -164,6 +168,8 @@ func (h *LanguageHandler) Update(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Language not found"})
 	}
 
+	h.invalidateCache(projectID)
+
 	return c.JSON(l)
 }
 
@@ -205,5 +211,15 @@ func (h *LanguageHandler) Delete(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Language not found"})
 	}
 
+	h.invalidateCache(projectID)
+
 	return c.JSON(fiber.Map{"message": "Language deleted"})
+}
+
+func (h *LanguageHandler) invalidateCache(projectID string) {
+	var slug string
+	_ = h.DB.QueryRow(context.Background(), "SELECT slug FROM projects WHERE id = $1", projectID).Scan(&slug)
+	if slug != "" {
+		_ = h.Cache.DeleteByPattern(context.Background(), cache.ProjectCachePattern(slug))
+	}
 }

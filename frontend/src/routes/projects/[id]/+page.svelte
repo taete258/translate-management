@@ -147,6 +147,7 @@
       pendingChanges = new Map();
       stats = await api.get<ProjectStats>(`/api/projects/${projectId}/stats`);
       entries = await api.get<TranslationEntry[]>(`/api/projects/${projectId}/translations`);
+      await refreshCacheStatus();
     } catch (err: any) {
       toasts.error(err.message || 'Save failed');
     } finally {
@@ -233,6 +234,32 @@
       cacheStatus = await api.get<CacheStatus>(`/api/projects/${projectId}/cache/status`);
     } catch (err: any) {
       toasts.error(err.message || 'Failed to invalidate cache');
+    }
+  }
+
+  let rebuildingCache = $state(false);
+  async function forceCache() {
+    if (!confirm('Rebuild all cached translations for this project? This will ensure API responses are pre-generated.')) return;
+    rebuildingCache = true;
+    try {
+      await api.post(`/api/projects/${projectId}/cache/rebuild`);
+      toasts.success('Cache rebuilt successfully');
+      cacheStatus = await api.get<CacheStatus>(`/api/projects/${projectId}/cache/status`);
+    } catch (err: any) {
+      toasts.error(err.message || 'Failed to rebuild cache');
+    } finally {
+      rebuildingCache = false;
+    }
+  }
+
+  let refreshingStatus = $state(false);
+  async function refreshCacheStatus() {
+    refreshingStatus = true;
+    try {
+      cacheStatus = await api.get<CacheStatus>(`/api/projects/${projectId}/cache/status`);
+    } catch { /* ok */ }
+    finally {
+      refreshingStatus = false;
     }
   }
 
@@ -388,11 +415,16 @@
       <div class="flex gap-2">
         <div class="flex items-center gap-2">
           {#if cacheStatus}
-            <span class="text-xs px-2 py-1 rounded-lg {cacheStatus.cached ? 'bg-emerald-600/20 text-emerald-500' : 'text-faint'}"
+            <button 
+              onclick={refreshCacheStatus}
+              class="text-xs px-2 py-1 rounded-lg transition-all hover:ring-1 hover:ring-primary-500/30 flex items-center gap-1.5 {cacheStatus.cached ? 'bg-emerald-600/20 text-emerald-500' : 'text-faint'}"
               style={cacheStatus.cached ? '' : 'background: var(--bg-input);'}
+              title="Click to refresh cache status"
+              disabled={refreshingStatus}
             >
+              <RefreshCcw size={10} class={refreshingStatus ? 'animate-spin' : ''} />
               {cacheStatus.cached ? `Cached (${cacheStatus.cached_keys})` : 'Not cached'}
-            </span>
+            </button>
           {/if}
           
           <!-- Environment Switcher -->
@@ -541,6 +573,22 @@
               <Users size={14} /> Share
             </button>
           {/if}
+
+          <button
+            onclick={forceCache}
+            disabled={rebuildingCache}
+            class="px-3 py-2 bg-emerald-600/20 text-emerald-500 hover:bg-emerald-600/30 border border-emerald-500/30 rounded-xl text-sm transition-all disabled:opacity-50"
+            title="Force rebuild cache"
+          >
+            <span class="flex items-center gap-1.5">
+              {#if rebuildingCache}
+                <span class="animate-spin inline-block w-3.5 h-3.5 border-2 border-emerald-500 border-t-transparent rounded-full"></span>
+                Rebuilding...
+              {:else}
+                <RefreshCcw size={14} /> Force Cache
+              {/if}
+            </span>
+          </button>
 
           <button
             onclick={invalidateCache}

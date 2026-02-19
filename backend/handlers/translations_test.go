@@ -19,7 +19,7 @@ func TestGetTranslations(t *testing.T) {
 	keyID := seedKey(t, projID, "welcome", "Welcome msg")
 	seedTranslation(t, keyID, langID, "Hello!")
 
-	h := NewTranslationHandler(testDB)
+	h := NewTranslationHandler(testDB, nil)
 	app := newTestApp("GET", "/projects/:id/translations", h.Get, ownerID)
 
 	resp := doRequest(t, app, "GET", fmt.Sprintf("/projects/%s/translations", projID), nil)
@@ -51,7 +51,7 @@ func TestGetTranslations_WithEnvFilter(t *testing.T) {
 	assignKeyToEnv(t, keyID1, envID)
 	// keyID2 is NOT in production env
 
-	h := NewTranslationHandler(testDB)
+	h := NewTranslationHandler(testDB, nil)
 	app := newTestApp("GET", "/projects/:id/translations", h.Get, ownerID)
 
 	url := fmt.Sprintf("/projects/%s/translations?env_id=%s", projID, envID)
@@ -77,7 +77,7 @@ func TestGetTranslations_NoAccess(t *testing.T) {
 	outsiderID := seedUser(t, "transoutsider@test.com", "transoutsider")
 	projID := seedProject(t, "Trans Project", "trans-proj3", ownerID)
 
-	h := NewTranslationHandler(testDB)
+	h := NewTranslationHandler(testDB, nil)
 	app := newTestApp("GET", "/projects/:id/translations", h.Get, outsiderID)
 
 	resp := doRequest(t, app, "GET", fmt.Sprintf("/projects/%s/translations", projID), nil)
@@ -93,7 +93,7 @@ func TestBatchUpdateTranslations(t *testing.T) {
 	langID := seedLanguage(t, projID, "en", "English", true)
 	keyID := seedKey(t, projID, "greet", "")
 
-	h := NewTranslationHandler(testDB)
+	h := NewTranslationHandler(testDB, nil)
 	app := newTestApp("PUT", "/projects/:id/translations", h.BatchUpdate, ownerID)
 
 	body := map[string]interface{}{
@@ -126,7 +126,7 @@ func TestBatchUpdateTranslations_NoPermission(t *testing.T) {
 	langID := seedLanguage(t, projID, "en", "English", true)
 	keyID := seedKey(t, projID, "greet", "")
 
-	h := NewTranslationHandler(testDB)
+	h := NewTranslationHandler(testDB, nil)
 	app := newTestApp("PUT", "/projects/:id/translations", h.BatchUpdate, viewerID)
 
 	body := map[string]interface{}{

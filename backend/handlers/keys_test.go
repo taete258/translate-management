@@ -18,7 +18,7 @@ func TestListKeys(t *testing.T) {
 	seedKey(t, projID, "home.title", "Home title")
 	seedKey(t, projID, "home.subtitle", "Home subtitle")
 
-	h := NewKeyHandler(testDB)
+	h := NewKeyHandler(testDB, nil)
 	app := newTestApp("GET", "/projects/:id/keys", h.List, ownerID)
 
 	resp := doRequest(t, app, "GET", fmt.Sprintf("/projects/%s/keys", projID), nil)
@@ -39,7 +39,7 @@ func TestListKeys_NotMember(t *testing.T) {
 	outsiderID := seedUser(t, "outsider@test.com", "outsider")
 	projID := seedProject(t, "Key Project", "key-proj2", ownerID)
 
-	h := NewKeyHandler(testDB)
+	h := NewKeyHandler(testDB, nil)
 	app := newTestApp("GET", "/projects/:id/keys", h.List, outsiderID)
 
 	resp := doRequest(t, app, "GET", fmt.Sprintf("/projects/%s/keys", projID), nil)
@@ -53,7 +53,7 @@ func TestCreateKey(t *testing.T) {
 	ownerID := seedUser(t, "keyowner3@test.com", "keyowner3")
 	projID := seedProject(t, "Key Project", "key-proj3", ownerID)
 
-	h := NewKeyHandler(testDB)
+	h := NewKeyHandler(testDB, nil)
 	app := newTestApp("POST", "/projects/:id/keys", h.Create, ownerID)
 
 	body := map[string]string{"key": "nav.home", "description": "Navigation home"}
@@ -75,7 +75,7 @@ func TestCreateKey_DuplicateKey(t *testing.T) {
 	projID := seedProject(t, "Key Project", "key-proj4", ownerID)
 	seedKey(t, projID, "nav.home", "existing")
 
-	h := NewKeyHandler(testDB)
+	h := NewKeyHandler(testDB, nil)
 	app := newTestApp("POST", "/projects/:id/keys", h.Create, ownerID)
 
 	body := map[string]string{"key": "nav.home"}
@@ -91,7 +91,7 @@ func TestDeleteKey(t *testing.T) {
 	projID := seedProject(t, "Key Project", "key-proj5", ownerID)
 	keyID := seedKey(t, projID, "nav.about", "")
 
-	h := NewKeyHandler(testDB)
+	h := NewKeyHandler(testDB, nil)
 	app := newTestApp("DELETE", "/projects/:id/keys/:keyId", h.Delete, ownerID)
 
 	resp := doRequest(t, app, "DELETE", fmt.Sprintf("/projects/%s/keys/%s", projID, keyID), nil)
@@ -105,7 +105,7 @@ func TestDeleteKey_NotFound(t *testing.T) {
 	ownerID := seedUser(t, "keyowner6@test.com", "keyowner6")
 	projID := seedProject(t, "Key Project", "key-proj6", ownerID)
 
-	h := NewKeyHandler(testDB)
+	h := NewKeyHandler(testDB, nil)
 	app := newTestApp("DELETE", "/projects/:id/keys/:keyId", h.Delete, ownerID)
 
 	resp := doRequest(t, app, "DELETE",
