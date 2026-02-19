@@ -3,7 +3,6 @@
   import { browser } from '$app/environment';
   import { goto } from '$app/navigation';
   import { auth } from '$lib/stores/auth';
-  import { theme } from '$lib/stores/theme';
   import Sidebar from '$lib/components/Sidebar.svelte';
   import Toast from '$lib/components/Toast.svelte';
   import '../app.css';
@@ -30,7 +29,7 @@
   <div class="flex min-h-screen">
     <Sidebar />
     <main class="flex-1 overflow-auto">
-      <div class="p-6 max-w-7xl mx-auto">
+      <div class="p-6 max-w-full mx-auto">
         {@render children()}
       </div>
     </main>

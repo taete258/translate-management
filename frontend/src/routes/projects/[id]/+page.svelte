@@ -3,10 +3,11 @@
   import { page } from '$app/state';
   import { api } from '$lib/api/client';
   import { toasts } from '$lib/stores/toast';
-  import type { Project, Language, TranslationEntry, ProjectStats, CacheStatus, ProjectMemberInfo } from '$lib/types';
-  import { ChevronDown, ArrowLeft, RefreshCcw, Plus, Star, X, Globe, Trash2, Download, Users, List, FolderTree } from 'lucide-svelte';
+  import type { Project, Language, TranslationEntry, ProjectStats, CacheStatus, ProjectMemberInfo, Environment } from '$lib/types';
+  import { ChevronDown, ArrowLeft, RefreshCcw, Plus, Star, X, Globe, Trash2, Download, Users, List, FolderTree, Layers, Pencil } from 'lucide-svelte';
   import { fade } from 'svelte/transition';
   import KeyVisualizer from '$lib/components/KeyVisualizer.svelte';
+  import Dropdown from '$lib/components/Dropdown.svelte';
 
   const projectId = $derived(page.params.id);
 
@@ -16,6 +17,8 @@
   let stats = $state<ProjectStats | null>(null);
   let cacheStatus = $state<CacheStatus | null>(null);
   let members = $state<ProjectMemberInfo[]>([]);
+  let environments = $state<Environment[]>([]);
+  let selectedEnvId = $state<string>(''); // '' = all environments
   let loading = $state(true);
   let saving = $state(false);
   let search = $state('');
@@ -23,7 +26,6 @@
   let viewMode = $state<'table' | 'visualizer'>('table');
 
   // Export
-  let showExportMenu = $state(false);
   let exporting = $state(false);
 
   // Language management
@@ -37,10 +39,19 @@
   let newKey = $state('');
   let newKeyDesc = $state('');
 
+  // Environment management
+  let showAddEnv = $state(false);
+  let newEnvName = $state('');
+  let newEnvDesc = $state('');
+  let cloneKeys = $state(true);
+  let editingEnv = $state<Environment | null>(null);
+
   // Sharing
   let showShare = $state(false);
   let inviteEmail = $state('');
   let inviteRole = $state('viewer');
+
+  const selectedEnv = $derived(environments.find(e => e.id === selectedEnvId) ?? null);
 
   const filteredEntries = $derived(
     entries.filter((e) =>
@@ -60,7 +71,7 @@
       const [p, l, t, s, m] = await Promise.all([
         api.get<Project>(`/api/projects/${projectId}`),
         api.get<Language[]>(`/api/projects/${projectId}/languages`),
-        api.get<TranslationEntry[]>(`/api/projects/${projectId}/translations`),
+        api.get<TranslationEntry[]>(`/api/projects/${projectId}/translations${selectedEnvId ? `?env_id=${selectedEnvId}` : ''}`),
         api.get<ProjectStats>(`/api/projects/${projectId}/stats`),
         api.get<ProjectMemberInfo[]>(`/api/projects/${projectId}/members`),
       ]);
@@ -72,10 +83,22 @@
       try {
         cacheStatus = await api.get<CacheStatus>(`/api/projects/${projectId}/cache/status`);
       } catch { /* ok */ }
+      try {
+        environments = await api.get<Environment[]>(`/api/projects/${projectId}/environments`);
+      } catch { /* ok — environments table may not exist yet */ }
     } catch {
       toasts.error('Failed to load project');
     } finally {
       loading = false;
+    }
+  }
+
+  async function loadTranslations() {
+    try {
+      const url = `/api/projects/${projectId}/translations${selectedEnvId ? `?env_id=${selectedEnvId}` : ''}`;
+      entries = await api.get<TranslationEntry[]>(url);
+    } catch {
+      toasts.error('Failed to load translations');
     }
   }
 
@@ -124,6 +147,7 @@
       pendingChanges = new Map();
       stats = await api.get<ProjectStats>(`/api/projects/${projectId}/stats`);
       entries = await api.get<TranslationEntry[]>(`/api/projects/${projectId}/translations`);
+      await refreshCacheStatus();
     } catch (err: any) {
       toasts.error(err.message || 'Save failed');
     } finally {
@@ -213,19 +237,46 @@
     }
   }
 
+  let rebuildingCache = $state(false);
+  async function forceCache() {
+    if (!confirm('Rebuild all cached translations for this project? This will ensure API responses are pre-generated.')) return;
+    rebuildingCache = true;
+    try {
+      await api.post(`/api/projects/${projectId}/cache/rebuild`);
+      toasts.success('Cache rebuilt successfully');
+      cacheStatus = await api.get<CacheStatus>(`/api/projects/${projectId}/cache/status`);
+    } catch (err: any) {
+      toasts.error(err.message || 'Failed to rebuild cache');
+    } finally {
+      rebuildingCache = false;
+    }
+  }
+
+  let refreshingStatus = $state(false);
+  async function refreshCacheStatus() {
+    refreshingStatus = true;
+    try {
+      cacheStatus = await api.get<CacheStatus>(`/api/projects/${projectId}/cache/status`);
+    } catch { /* ok */ }
+    finally {
+      refreshingStatus = false;
+    }
+  }
+
   async function exportTranslations(langCode: string, format: 'json' | 'msgpack') {
     exporting = true;
-    showExportMenu = false;
     try {
+      const envParam = selectedEnvId ? `&env_id=${selectedEnvId}` : '';
       const blob = await api.get<Blob>(
-        `/api/projects/${projectId}/export/${langCode}?format=${format}`,
+        `/api/projects/${projectId}/export/${langCode}?format=${format}${envParam}`,
         { responseType: 'blob' }
       );
       const ext = format === 'msgpack' ? 'msgpack' : 'json';
+      const envSuffix = selectedEnv ? `_${selectedEnv.name}` : '';
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${project?.slug || 'translations'}_${langCode}.${ext}`;
+      a.download = `${project?.slug || 'translations'}_${langCode}${envSuffix}.${ext}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -239,15 +290,72 @@
     }
   }
 
-  function handleClickOutsideExport(event: MouseEvent) {
-    const target = event.target as HTMLElement;
-    if (!target.closest('.export-dropdown')) {
-      showExportMenu = false;
+  async function saveEnvironment() {
+    try {
+      if (editingEnv) {
+        await api.put(`/api/projects/${projectId}/environments/${editingEnv.id}`, {
+          name: newEnvName,
+          description: newEnvDesc,
+        });
+        toasts.success(`Environment "${newEnvName}" updated`);
+      } else {
+        await api.post(`/api/projects/${projectId}/environments`, {
+          name: newEnvName,
+          description: newEnvDesc,
+          clone_keys: cloneKeys,
+        });
+        toasts.success(`Environment "${newEnvName}" created`);
+      }
+      showAddEnv = false;
+      newEnvName = '';
+      newEnvDesc = '';
+      cloneKeys = true;
+      editingEnv = null;
+      environments = await api.get<Environment[]>(`/api/projects/${projectId}/environments`);
+    } catch (err: any) {
+      toasts.error(err.message || 'Failed to save environment');
     }
+  }
+
+  async function deleteEnvironment(env: Environment) {
+    if (!confirm(`Delete environment "${env.name}"? This cannot be undone.`)) return;
+    try {
+      await api.delete(`/api/projects/${projectId}/environments/${env.id}`);
+      toasts.success(`Environment "${env.name}" deleted`);
+      if (selectedEnvId === env.id) {
+        selectedEnvId = '';
+        await loadTranslations();
+      }
+      environments = await api.get<Environment[]>(`/api/projects/${projectId}/environments`);
+    } catch (err: any) {
+      toasts.error(err.message || 'Failed to delete environment');
+    }
+  }
+
+  function openAddEnvModal() {
+    editingEnv = null;
+    newEnvName = '';
+    newEnvDesc = '';
+    cloneKeys = true;
+    showAddEnv = true;
+  }
+
+  function openEditEnvModal(env: Environment) {
+    editingEnv = env;
+    newEnvName = env.name;
+    newEnvDesc = env.description || '';
+    cloneKeys = false;
+    showAddEnv = true;
+  }
+
+  async function switchEnvironment(envId: string) {
+    selectedEnvId = envId;
+    pendingChanges = new Map();
+    await loadTranslations();
   }
 </script>
 
-<svelte:window onclick={handleClickOutsideExport} />
+
 
 {#if loading}
   <div class="flex items-center justify-center py-20">
@@ -307,75 +415,153 @@
       <div class="flex gap-2">
         <div class="flex items-center gap-2">
           {#if cacheStatus}
-            <span class="text-xs px-2 py-1 rounded-lg {cacheStatus.cached ? 'bg-emerald-600/20 text-emerald-500' : 'text-faint'}"
+            <button 
+              onclick={refreshCacheStatus}
+              class="text-xs px-2 py-1 rounded-lg transition-all hover:ring-1 hover:ring-primary-500/30 flex items-center gap-1.5 {cacheStatus.cached ? 'bg-emerald-600/20 text-emerald-500' : 'text-faint'}"
               style={cacheStatus.cached ? '' : 'background: var(--bg-input);'}
+              title="Click to refresh cache status"
+              disabled={refreshingStatus}
             >
+              <RefreshCcw size={10} class={refreshingStatus ? 'animate-spin' : ''} />
               {cacheStatus.cached ? `Cached (${cacheStatus.cached_keys})` : 'Not cached'}
-            </span>
+            </button>
           {/if}
+          
+          <!-- Environment Switcher -->
+          <Dropdown items={environments} dropdownClass="w-[350px] left-0 top-full">
+            {#snippet trigger(isOpen)}
+              <div
+                class="px-3 py-2 bg-[var(--bg-card)] border border-[var(--border-subtle)] hover:border-[var(--border-muted)] rounded-xl text-sm transition-all flex items-center gap-1.5 text-body cursor-pointer"
+                title="Switch environment"
+              >
+                <Layers size={14} class="text-faint" />
+                <span class="max-w-[100px] truncate">{selectedEnv ? selectedEnv.name : 'All Envs'}</span>
+                <ChevronDown size={14} class="text-faint transition-transform {isOpen ? 'rotate-180' : ''}" />
+              </div>
+            {/snippet}
+
+            {#snippet header(close)}
+              <div class="px-3 py-2" style="border-bottom: 1px solid var(--border-subtle);">
+                <p class="text-xs font-semibold text-faint uppercase tracking-wider">Environments</p>
+              </div>
+              <!-- All option -->
+              <button
+                onclick={() => { switchEnvironment(''); close(); }}
+                class="w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center gap-2 {selectedEnvId === '' ? 'text-primary-400 font-medium' : 'text-body hover:bg-[var(--bg-card)]'}"
+              >
+                <Globe size={13} />
+                All Environments
+                {#if selectedEnvId === ''}
+                  <span class="ml-auto text-primary-400">✓</span>
+                {/if}
+              </button>
+            {/snippet}
+
+            {#snippet item(env, close)}
+              <div class="flex items-center justify-between w-full px-4 py-2.5 hover:bg-[var(--bg-card)] transition-colors group" style="border-top: 1px solid var(--border-subtle);">
+                <button
+                    onclick={() => { switchEnvironment(env.id); close(); }}
+                    class="flex-1 text-left text-sm flex items-center gap-2 min-w-0 {selectedEnvId === env.id ? 'text-primary-400 font-medium' : 'text-body'}"
+                >
+                    <Layers size={13} class="shrink-0" />
+                    <span class="truncate">{env.name}</span>
+                    {#if env.description}
+                    <span class="text-xs text-faint truncate ml-2 opacity-70 hidden sm:inline-block max-w-[100px]">{env.description}</span>
+                    {/if}
+                    {#if selectedEnvId === env.id}
+                    <span class="ml-auto text-primary-400 shrink-0 text-xs">Active</span>
+                    {/if}
+                </button>
+                
+                {#if canEdit}
+                    <div class="flex items-center gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
+                            onclick={(e) => { e.stopPropagation(); openEditEnvModal(env); close(); }}
+                            class="p-1 text-faint hover:text-primary-400 rounded-md hover:bg-primary-500/10 transition-all"
+                            title="Edit"
+                        >
+                            <Pencil size={12} />
+                        </button>
+                        <button 
+                            onclick={(e) => { e.stopPropagation(); deleteEnvironment(env); close(); }}
+                            class="p-1 text-faint hover:text-red-500 rounded-md hover:bg-red-500/10 transition-all"
+                            title="Delete"
+                        >
+                            <Trash2 size={12} />
+                        </button>
+                    </div>
+                {/if}
+              </div>
+            {/snippet}
+
+            {#snippet footer(close)}
+              {#if canEdit}
+                <button
+                  onclick={() => { close(); openAddEnvModal(); }}
+                  class="w-full text-left px-4 py-2.5 text-sm text-primary-400 hover:bg-primary-500/10 transition-colors flex items-center gap-2"
+                  style="border-top: 1px solid var(--border-subtle);"
+                >
+                  <Plus size={13} /> New Environment
+                </button>
+              {/if}
+            {/snippet}
+          </Dropdown>
 
           <!-- Export Dropdown -->
           {#if languages.length > 0}
-            <div class="relative export-dropdown">
-              <button
-                onclick={() => showExportMenu = !showExportMenu}
-                disabled={exporting}
-                class="px-3 py-2 bg-violet-600/20 text-violet-400 hover:bg-violet-600/30 border border-violet-500/30 rounded-xl text-sm transition-all disabled:opacity-50 flex items-center gap-1.5"
-                title="Export translations"
-              >
-                {#if exporting}
-                  <span class="animate-spin inline-block w-3.5 h-3.5 border-2 border-violet-400 border-t-transparent rounded-full"></span>
-                  Exporting...
-                {:else}
-                  <Download size={14} /> Export
-                  <ChevronDown size={14} class="transition-transform {showExportMenu ? 'rotate-180' : ''}" />
-                {/if}
-              </button>
-
-              {#if showExportMenu}
-                <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <Dropdown items={languages} dropdownClass="w-72 right-0 top-full">
+              {#snippet trigger(isOpen)}
                 <div
-                  class="absolute right-0 top-full mt-2 w-72 rounded-2xl shadow-2xl z-50 overflow-hidden"
-                  style="background: var(--bg-modal); border: 1px solid var(--border-subtle);"
+                  class="px-3 py-2 bg-violet-600/20 text-violet-400 hover:bg-violet-600/30 border border-violet-500/30 rounded-xl text-sm transition-all disabled:opacity-50 flex items-center gap-1.5 cursor-pointer {exporting ? 'opacity-50 pointer-events-none' : ''}"
+                  title="Export translations"
                 >
-                  <div class="px-4 py-3" style="border-bottom: 1px solid var(--border-subtle);">
-                    <p class="text-sm font-semibold text-heading">Export Translations</p>
-                    <p class="text-xs text-faint mt-0.5">Select language &amp; format</p>
+                  {#if exporting}
+                    <span class="animate-spin inline-block w-3.5 h-3.5 border-2 border-violet-400 border-t-transparent rounded-full"></span>
+                    Exporting...
+                  {:else}
+                    <Download size={14} /> Export
+                    <ChevronDown size={14} class="transition-transform {isOpen ? 'rotate-180' : ''}" />
+                  {/if}
+                </div>
+              {/snippet}
+
+              {#snippet header(close)}
+                <div class="px-4 py-3" style="border-bottom: 1px solid var(--border-subtle);">
+                  <p class="text-sm font-semibold text-heading">Export Translations</p>
+                  <p class="text-xs text-faint mt-0.5">Select language &amp; format</p>
+                </div>
+              {/snippet}
+
+              {#snippet item(lang, close)}
+                <div class="px-4 py-2.5 flex items-center justify-between gap-2 transition-colors"
+                  style="border-bottom: 1px solid var(--border-subtle);"
+                >
+                  <div class="flex items-center gap-2 min-w-0">
+                    <span class="text-sm text-body truncate">{lang.name}</span>
+                    <span class="text-xs font-mono text-faint">({lang.code})</span>
+                    {#if lang.is_default}
+                      <span class="text-xs text-primary-500">★</span>
+                    {/if}
                   </div>
-                  <div class="max-h-64 overflow-y-auto">
-                    {#each languages as lang}
-                      <div class="px-4 py-2.5 flex items-center justify-between gap-2 transition-colors"
-                        style="border-bottom: 1px solid var(--border-subtle);"
-                      >
-                        <div class="flex items-center gap-2 min-w-0">
-                          <span class="text-sm text-body truncate">{lang.name}</span>
-                          <span class="text-xs font-mono text-faint">({lang.code})</span>
-                          {#if lang.is_default}
-                            <span class="text-xs text-primary-500">★</span>
-                          {/if}
-                        </div>
-                        <div class="flex gap-1.5 shrink-0">
-                          <button
-                            onclick={() => exportTranslations(lang.code, 'json')}
-                            class="px-2.5 py-1 text-xs font-medium rounded-lg bg-blue-600/15 text-blue-400 hover:bg-blue-600/30 border border-blue-500/20 hover:border-blue-500/40 transition-all"
-                            title="Export as JSON"
-                          >
-                            JSON
-                          </button>
-                          <button
-                            onclick={() => exportTranslations(lang.code, 'msgpack')}
-                            class="px-2.5 py-1 text-xs font-medium rounded-lg bg-orange-600/15 text-orange-400 hover:bg-orange-600/30 border border-orange-500/20 hover:border-orange-500/40 transition-all"
-                            title="Export as MessagePack"
-                          >
-                            MsgPack
-                          </button>
-                        </div>
-                      </div>
-                    {/each}
+                  <div class="flex gap-1.5 shrink-0">
+                    <button
+                      onclick={() => { exportTranslations(lang.code, 'json'); close(); }}
+                      class="px-2.5 py-1 text-xs font-medium rounded-lg bg-blue-600/15 text-blue-400 hover:bg-blue-600/30 border border-blue-500/20 hover:border-blue-500/40 transition-all"
+                      title="Export as JSON"
+                    >
+                      JSON
+                    </button>
+                    <button
+                      onclick={() => { exportTranslations(lang.code, 'msgpack'); close(); }}
+                      class="px-2.5 py-1 text-xs font-medium rounded-lg bg-orange-600/15 text-orange-400 hover:bg-orange-600/30 border border-orange-500/20 hover:border-orange-500/40 transition-all"
+                      title="Export as MessagePack"
+                    >
+                      MsgPack
+                    </button>
                   </div>
                 </div>
-              {/if}
-            </div>
+              {/snippet}
+            </Dropdown>
           {/if}
 
           {#if isOwner}
@@ -388,15 +574,33 @@
             </button>
           {/if}
 
-          <button
-            onclick={invalidateCache}
-            class="px-3 py-2 bg-amber-600/20 text-amber-500 hover:bg-amber-600/30 border border-amber-500/30 rounded-xl text-sm transition-all"
-            title="Force invalidate cache"
-          >
-            <span class="flex items-center gap-1.5">
-              <RefreshCcw size={14} /> Invalidate Cache
-            </span>
-          </button>
+          {#if isOwner}
+            <button
+              onclick={forceCache}
+              disabled={rebuildingCache}
+              class="px-3 py-2 bg-emerald-600/20 text-emerald-500 hover:bg-emerald-600/30 border border-emerald-500/30 rounded-xl text-sm transition-all disabled:opacity-50"
+              title="Force rebuild cache"
+            >
+              <span class="flex items-center gap-1.5">
+                {#if rebuildingCache}
+                  <span class="animate-spin inline-block w-3.5 h-3.5 border-2 border-emerald-500 border-t-transparent rounded-full"></span>
+                  Rebuilding...
+                {:else}
+                  <RefreshCcw size={14} /> Force Cache
+                {/if}
+              </span>
+            </button>
+
+            <button
+              onclick={invalidateCache}
+              class="px-3 py-2 bg-amber-600/20 text-amber-500 hover:bg-amber-600/30 border border-amber-500/30 rounded-xl text-sm transition-all"
+              title="Force invalidate cache"
+            >
+              <span class="flex items-center gap-1.5">
+                <RefreshCcw size={14} /> Invalidate Cache
+              </span>
+            </button>
+          {/if}
         </div>
       </div>
     </div>
@@ -676,6 +880,54 @@
             <div class="flex gap-3 justify-end">
               <button type="button" onclick={() => showShare = false} class="px-4 py-2 text-subtle hover:text-heading text-sm">Cancel</button>
               <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm">Send Invite</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  {/if}
+
+  <!-- Create/Edit Environment Modal -->
+  {#if showAddEnv}
+    <div class="fixed inset-0 z-50 flex items-center justify-center">
+      <button class="themed-modal-overlay absolute inset-0 backdrop-blur-sm" aria-label="Close" onclick={() => showAddEnv = false}></button>
+      <div class="themed-modal relative rounded-2xl p-6 w-full max-w-sm">
+        <div class="flex items-center gap-2 mb-4">
+          <Layers size={20} class="text-primary-400" />
+          <h2 class="text-xl font-bold text-heading">{editingEnv ? 'Edit Environment' : 'New Environment'}</h2>
+        </div>
+        {#if !editingEnv}
+           <p class="text-sm text-faint mb-5">Create a separate environment to manage translations independently.</p>
+        {/if}
+        <form onsubmit={(e) => { e.preventDefault(); saveEnvironment(); }}>
+          <div class="space-y-4">
+            <div>
+              <label for="envName" class="block text-sm font-medium text-body mb-1.5">Name <span class="text-red-500">*</span></label>
+              <input id="envName" type="text" bind:value={newEnvName} placeholder="production" required
+                class="themed-input w-full px-4 py-2.5 rounded-xl font-mono text-sm transition-all" />
+            </div>
+            <div>
+              <label for="envDesc" class="block text-sm font-medium text-body mb-1.5">Description</label>
+              <input id="envDesc" type="text" bind:value={newEnvDesc} placeholder="Optional description"
+                class="themed-input w-full px-4 py-2.5 rounded-xl transition-all" />
+            </div>
+            
+            {#if !editingEnv}
+                <label class="flex items-center gap-2 text-sm text-body cursor-pointer">
+                <input type="checkbox" bind:checked={cloneKeys} class="accent-primary-500 w-4 h-4" />
+                <span>Clone existing keys to this environment</span>
+                </label>
+            {/if}
+
+            <div class="flex gap-3 justify-end pt-1">
+              <button type="button" onclick={() => showAddEnv = false} class="px-4 py-2 text-subtle hover:text-heading text-sm">Cancel</button>
+              <button type="submit" class="px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-xl text-sm flex items-center gap-1.5">
+                {#if editingEnv}
+                    Save Changes
+                {:else}
+                    <Plus size={14} /> Create Environment
+                {/if}
+              </button>
             </div>
           </div>
         </form>

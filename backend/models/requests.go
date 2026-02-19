@@ -87,6 +87,19 @@ type ImportRequest struct {
 	Translations map[string]interface{} `json:"translations" validate:"required"`
 }
 
+// CreateEnvironmentRequest is the request body for creating an environment
+type CreateEnvironmentRequest struct {
+	Name        string `json:"name" validate:"required,min=1,max=100"`
+	Description string `json:"description"`
+	CloneKeys   bool   `json:"clone_keys"`
+}
+
+// UpdateEnvironmentRequest is the request body for updating an environment
+type UpdateEnvironmentRequest struct {
+	Name        string `json:"name" validate:"required,min=1,max=100"`
+	Description string `json:"description"`
+}
+
 // ErrorResponse is a standard error response
 type ErrorResponse struct {
 	Error   string `json:"error"`

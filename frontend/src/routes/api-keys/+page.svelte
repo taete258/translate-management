@@ -23,7 +23,8 @@
 
   onMount(async () => {
     try {
-      projects = await api.get<Project[]>('/api/projects');
+      const allProjects = await api.get<Project[]>('/api/projects');
+      projects = allProjects.filter(p => p.role === 'owner');
       if (projects.length > 0) {
         // This assignment will trigger the effect above
         selectedProjectId = projects[0].id;

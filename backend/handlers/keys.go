@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 
+	"translate-management/cache"
 	"translate-management/models"
 
 	"github.com/gofiber/fiber/v2"
@@ -10,11 +11,12 @@ import (
 )
 
 type KeyHandler struct {
-	DB *pgxpool.Pool
+	DB    *pgxpool.Pool
+	Cache *cache.RedisClient
 }
 
-func NewKeyHandler(db *pgxpool.Pool) *KeyHandler {
-	return &KeyHandler{DB: db}
+func NewKeyHandler(db *pgxpool.Pool, rdb *cache.RedisClient) *KeyHandler {
+	return &KeyHandler{DB: db, Cache: rdb}
 }
 
 // List returns all translation keys for a project
@@ -111,6 +113,8 @@ func (h *KeyHandler) Create(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create key. Key might already exist."})
 	}
 
+	h.invalidateCache(projectID)
+
 	return c.Status(fiber.StatusCreated).JSON(k)
 }
 
@@ -163,6 +167,8 @@ func (h *KeyHandler) Update(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Key not found"})
 	}
 
+	h.invalidateCache(projectID)
+
 	return c.JSON(k)
 }
 
@@ -205,5 +211,15 @@ func (h *KeyHandler) Delete(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Key not found"})
 	}
 
+	h.invalidateCache(projectID)
+
 	return c.JSON(fiber.Map{"message": "Key deleted"})
+}
+
+func (h *KeyHandler) invalidateCache(projectID string) {
+	var slug string
+	_ = h.DB.QueryRow(context.Background(), "SELECT slug FROM projects WHERE id = $1", projectID).Scan(&slug)
+	if slug != "" {
+		_ = h.Cache.DeleteByPattern(context.Background(), cache.ProjectCachePattern(slug))
+	}
 }

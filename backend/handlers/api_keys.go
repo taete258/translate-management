@@ -26,10 +26,16 @@ func (h *APIKeyHandler) List(c *fiber.Ctx) error {
 	projectID := c.Params("id")
 	userID := c.Locals("user_id").(string)
 
-	// Verify project ownership
+	// Verify project ownership (either creator or member with 'owner' role)
 	var exists bool
-	if err := h.DB.QueryRow(context.Background(), "SELECT EXISTS(SELECT 1 FROM projects WHERE id = $1 AND created_by = $2)", projectID, userID).Scan(&exists); err != nil || !exists {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Project not found"})
+	query := `
+		SELECT EXISTS(
+			SELECT 1 FROM projects p 
+			LEFT JOIN project_members pm ON p.id = pm.project_id AND pm.user_id = $2
+			WHERE p.id = $1 AND (p.created_by = $2 OR pm.role = 'owner')
+		)`
+	if err := h.DB.QueryRow(context.Background(), query, projectID, userID).Scan(&exists); err != nil || !exists {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Project not found or owner access required"})
 	}
 
 	rows, err := h.DB.Query(context.Background(),
@@ -59,10 +65,16 @@ func (h *APIKeyHandler) Create(c *fiber.Ctx) error {
 	projectID := c.Params("id")
 	userID := c.Locals("user_id").(string)
 
-	// Verify project ownership
+	// Verify project ownership (either creator or member with 'owner' role)
 	var exists bool
-	if err := h.DB.QueryRow(context.Background(), "SELECT EXISTS(SELECT 1 FROM projects WHERE id = $1 AND created_by = $2)", projectID, userID).Scan(&exists); err != nil || !exists {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Project not found"})
+	query := `
+		SELECT EXISTS(
+			SELECT 1 FROM projects p 
+			LEFT JOIN project_members pm ON p.id = pm.project_id AND pm.user_id = $2
+			WHERE p.id = $1 AND (p.created_by = $2 OR pm.role = 'owner')
+		)`
+	if err := h.DB.QueryRow(context.Background(), query, projectID, userID).Scan(&exists); err != nil || !exists {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Project not found or owner access required"})
 	}
 
 	var req models.CreateAPIKeyRequest
@@ -112,10 +124,16 @@ func (h *APIKeyHandler) Delete(c *fiber.Ctx) error {
 	projectID := c.Params("id")
 	userID := c.Locals("user_id").(string)
 
-	// Verify project ownership
+	// Verify project ownership (either creator or member with 'owner' role)
 	var exists bool
-	if err := h.DB.QueryRow(context.Background(), "SELECT EXISTS(SELECT 1 FROM projects WHERE id = $1 AND created_by = $2)", projectID, userID).Scan(&exists); err != nil || !exists {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Project not found"})
+	query := `
+		SELECT EXISTS(
+			SELECT 1 FROM projects p 
+			LEFT JOIN project_members pm ON p.id = pm.project_id AND pm.user_id = $2
+			WHERE p.id = $1 AND (p.created_by = $2 OR pm.role = 'owner')
+		)`
+	if err := h.DB.QueryRow(context.Background(), query, projectID, userID).Scan(&exists); err != nil || !exists {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Project not found or owner access required"})
 	}
 	keyID := c.Params("keyId")
 

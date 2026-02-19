@@ -14,15 +14,16 @@ func Setup(app *fiber.App, db *pgxpool.Pool, rdb *cache.RedisClient, cfg *config
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(db, cfg)
 	projectHandler := handlers.NewProjectHandler(db)
-	languageHandler := handlers.NewLanguageHandler(db)
-	keyHandler := handlers.NewKeyHandler(db)
-	translationHandler := handlers.NewTranslationHandler(db)
+	languageHandler := handlers.NewLanguageHandler(db, rdb)
+	keyHandler := handlers.NewKeyHandler(db, rdb)
+	translationHandler := handlers.NewTranslationHandler(db, rdb)
 	apiKeyHandler := handlers.NewAPIKeyHandler(db)
 	cacheHandler := handlers.NewCacheHandler(db, rdb)
 	exportHandler := handlers.NewExportHandler(db, rdb)
 	importHandler := handlers.NewImportHandler(db)
 	projectExportHandler := handlers.NewProjectExportHandler(db)
 	invitationHandler := handlers.NewInvitationHandler(db)
+	environmentHandler := handlers.NewEnvironmentHandler(db)
 
 	api := app.Group("/api")
 	// Export routes (API key auth)
@@ -80,10 +81,17 @@ func Setup(app *fiber.App, db *pgxpool.Pool, rdb *cache.RedisClient, cfg *config
 
 	// Cache management
 	projects.Post("/:id/cache/invalidate", cacheHandler.Invalidate)
+	projects.Post("/:id/cache/rebuild", cacheHandler.Rebuild)
 	projects.Get("/:id/cache/status", cacheHandler.Status)
 
 	// Invitations
 	projects.Post("/:id/invitations", invitationHandler.InviteUser)
 	api.Get("/invitations", middleware.AuthRequired(cfg), invitationHandler.GetInvitations)
 	api.Post("/invitations/:id/respond", middleware.AuthRequired(cfg), invitationHandler.RespondToInvitation)
+
+	// Environments
+	projects.Get("/:id/environments", environmentHandler.List)
+	projects.Post("/:id/environments", environmentHandler.Create)
+	projects.Put("/:id/environments/:envId", environmentHandler.Update)
+	projects.Delete("/:id/environments/:envId", environmentHandler.Delete)
 }

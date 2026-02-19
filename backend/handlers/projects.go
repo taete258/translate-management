@@ -27,9 +27,10 @@ func (h *ProjectHandler) List(c *fiber.Ctx) error {
 
 	var rows interface{ Close() }
 	query := `
-		SELECT DISTINCT p.id, p.name, p.slug, p.description, p.created_by, p.created_at, p.updated_at 
+		SELECT DISTINCT p.id, p.name, p.slug, p.description, p.created_by, p.created_at, p.updated_at,
+		CASE WHEN p.created_by = $1 THEN 'owner' ELSE COALESCE(pm.role, 'viewer') END as role
 		FROM projects p
-		LEFT JOIN project_members pm ON p.id = pm.project_id
+		LEFT JOIN project_members pm ON p.id = pm.project_id AND pm.user_id = $1
 		WHERE p.created_by = $1 OR pm.user_id = $1`
 	args := []interface{}{userID}
 
@@ -47,10 +48,11 @@ func (h *ProjectHandler) List(c *fiber.Ctx) error {
 	rows = r
 	defer rows.Close()
 
-	projects := []models.Project{}
+	projects := []models.ProjectWithRole{}
 	for r.Next() {
-		var p models.Project
-		if err := r.Scan(&p.ID, &p.Name, &p.Slug, &p.Description, &p.CreatedBy, &p.CreatedAt, &p.UpdatedAt); err != nil {
+		var p models.ProjectWithRole
+		if err := r.Scan(&p.ID, &p.Name, &p.Slug, &p.Description, &p.CreatedBy, &p.CreatedAt, &p.UpdatedAt, &p.Role); err != nil {
+			log.Printf("Error scanning project: %v", err)
 			continue
 		}
 		projects = append(projects, p)
@@ -231,6 +233,7 @@ func (h *ProjectHandler) ListMembers(c *fiber.Ctx) error {
 
 	// Fetch owner
 	var owner models.ProjectMemberInfo
+	var ownerID string
 	err = h.DB.QueryRow(context.Background(),
 		`SELECT u.id, u.email, u.name, u.username, u.avatar_url, 'owner' as role
 		 FROM users u
@@ -239,14 +242,23 @@ func (h *ProjectHandler) ListMembers(c *fiber.Ctx) error {
 
 	if err != nil {
 		log.Printf("Error fetching owner: %v", err)
+	} else {
+		ownerID = owner.UserID
 	}
 
-	// Fetch members
-	rows, err := h.DB.Query(context.Background(),
-		`SELECT u.id, u.email, u.name, u.username, u.avatar_url, pm.role
+	// Fetch members (excluding owner to prevent duplicates)
+	query := `SELECT u.id, u.email, u.name, u.username, u.avatar_url, pm.role
 		 FROM users u
 		 JOIN project_members pm ON pm.user_id = u.id
-		 WHERE pm.project_id = $1`, id)
+		 WHERE pm.project_id = $1`
+	args := []interface{}{id}
+
+	if ownerID != "" {
+		query += ` AND u.id != $2`
+		args = append(args, ownerID)
+	}
+
+	rows, err := h.DB.Query(context.Background(), query, args...)
 
 	members := []models.ProjectMemberInfo{}
 	if err == nil {
@@ -260,7 +272,11 @@ func (h *ProjectHandler) ListMembers(c *fiber.Ctx) error {
 	}
 
 	// Combine owner and members
-	allMembers := append([]models.ProjectMemberInfo{owner}, members...)
+	allMembers := []models.ProjectMemberInfo{}
+	if ownerID != "" {
+		allMembers = append(allMembers, owner)
+	}
+	allMembers = append(allMembers, members...)
 
 	return c.JSON(allMembers)
 }

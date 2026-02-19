@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -29,6 +30,7 @@ func (h *ProjectExportHandler) ExportLanguage(c *fiber.Ctx) error {
 	}
 	langCode := c.Params("langCode")
 	format := c.Query("format", "json")
+	envID := c.Query("env_id", "")
 
 	if format != "json" && format != "msgpack" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Format must be 'json' or 'msgpack'"})
@@ -44,15 +46,19 @@ func (h *ProjectExportHandler) ExportLanguage(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Language not found"})
 	}
 
-	// Get all translations for this language
-	rows, err := h.DB.Query(context.Background(),
-		`SELECT tk.key, t.value
+	// Build query — optionally filter by environment
+	query := `SELECT tk.key, t.value
 		 FROM translation_keys tk
 		 LEFT JOIN translations t ON t.key_id = tk.id AND t.language_id = $2
-		 WHERE tk.project_id = $1
-		 ORDER BY tk.key`,
-		projectID, languageID,
-	)
+		 WHERE tk.project_id = $1`
+	args := []interface{}{projectID, languageID}
+	if envID != "" {
+		query += ` AND tk.id IN (SELECT key_id FROM key_environments WHERE env_id = $` + fmt.Sprint(len(args)+1) + `)`
+		args = append(args, envID)
+	}
+	query += ` ORDER BY tk.key`
+
+	rows, err := h.DB.Query(context.Background(), query, args...)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch translations"})
 	}
