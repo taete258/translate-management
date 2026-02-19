@@ -71,6 +71,7 @@ docker compose up --build -d
 ### Export (API Key Required)
 
 - `GET /api/export/:slug/:langCode?format=json|msgpack` — Export translations
+- `GET /api/export/:slug/:langCode/version?format=json|msgpack` — Get export version hash
 
 ## Environment Variables
 
