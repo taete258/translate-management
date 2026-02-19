@@ -27,9 +27,10 @@ func (h *ProjectHandler) List(c *fiber.Ctx) error {
 
 	var rows interface{ Close() }
 	query := `
-		SELECT DISTINCT p.id, p.name, p.slug, p.description, p.created_by, p.created_at, p.updated_at 
+		SELECT DISTINCT p.id, p.name, p.slug, p.description, p.created_by, p.created_at, p.updated_at,
+		CASE WHEN p.created_by = $1 THEN 'owner' ELSE COALESCE(pm.role, 'viewer') END as role
 		FROM projects p
-		LEFT JOIN project_members pm ON p.id = pm.project_id
+		LEFT JOIN project_members pm ON p.id = pm.project_id AND pm.user_id = $1
 		WHERE p.created_by = $1 OR pm.user_id = $1`
 	args := []interface{}{userID}
 
@@ -47,10 +48,11 @@ func (h *ProjectHandler) List(c *fiber.Ctx) error {
 	rows = r
 	defer rows.Close()
 
-	projects := []models.Project{}
+	projects := []models.ProjectWithRole{}
 	for r.Next() {
-		var p models.Project
-		if err := r.Scan(&p.ID, &p.Name, &p.Slug, &p.Description, &p.CreatedBy, &p.CreatedAt, &p.UpdatedAt); err != nil {
+		var p models.ProjectWithRole
+		if err := r.Scan(&p.ID, &p.Name, &p.Slug, &p.Description, &p.CreatedBy, &p.CreatedAt, &p.UpdatedAt, &p.Role); err != nil {
+			log.Printf("Error scanning project: %v", err)
 			continue
 		}
 		projects = append(projects, p)

@@ -574,31 +574,33 @@
             </button>
           {/if}
 
-          <button
-            onclick={forceCache}
-            disabled={rebuildingCache}
-            class="px-3 py-2 bg-emerald-600/20 text-emerald-500 hover:bg-emerald-600/30 border border-emerald-500/30 rounded-xl text-sm transition-all disabled:opacity-50"
-            title="Force rebuild cache"
-          >
-            <span class="flex items-center gap-1.5">
-              {#if rebuildingCache}
-                <span class="animate-spin inline-block w-3.5 h-3.5 border-2 border-emerald-500 border-t-transparent rounded-full"></span>
-                Rebuilding...
-              {:else}
-                <RefreshCcw size={14} /> Force Cache
-              {/if}
-            </span>
-          </button>
+          {#if isOwner}
+            <button
+              onclick={forceCache}
+              disabled={rebuildingCache}
+              class="px-3 py-2 bg-emerald-600/20 text-emerald-500 hover:bg-emerald-600/30 border border-emerald-500/30 rounded-xl text-sm transition-all disabled:opacity-50"
+              title="Force rebuild cache"
+            >
+              <span class="flex items-center gap-1.5">
+                {#if rebuildingCache}
+                  <span class="animate-spin inline-block w-3.5 h-3.5 border-2 border-emerald-500 border-t-transparent rounded-full"></span>
+                  Rebuilding...
+                {:else}
+                  <RefreshCcw size={14} /> Force Cache
+                {/if}
+              </span>
+            </button>
 
-          <button
-            onclick={invalidateCache}
-            class="px-3 py-2 bg-amber-600/20 text-amber-500 hover:bg-amber-600/30 border border-amber-500/30 rounded-xl text-sm transition-all"
-            title="Force invalidate cache"
-          >
-            <span class="flex items-center gap-1.5">
-              <RefreshCcw size={14} /> Invalidate Cache
-            </span>
-          </button>
+            <button
+              onclick={invalidateCache}
+              class="px-3 py-2 bg-amber-600/20 text-amber-500 hover:bg-amber-600/30 border border-amber-500/30 rounded-xl text-sm transition-all"
+              title="Force invalidate cache"
+            >
+              <span class="flex items-center gap-1.5">
+                <RefreshCcw size={14} /> Invalidate Cache
+              </span>
+            </button>
+          {/if}
         </div>
       </div>
     </div>
